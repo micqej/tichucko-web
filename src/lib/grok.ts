@@ -4,10 +4,9 @@ import type { AgeId } from './types'
 import type { GenerateInput, GeneratedStory } from './openai'
 import { AGE_CATEGORIES } from './data'
 
-const grok = new OpenAI({
-  apiKey: process.env.GROK_API_KEY,
-  baseURL: 'https://api.x.ai/v1',
-})
+function getGrok() {
+  return new OpenAI({ apiKey: process.env.GROK_API_KEY, baseURL: 'https://api.x.ai/v1' })
+}
 
 const COVER_PALETTES: Record<AgeId, { a: string; b: string }> = {
   a02: { a: '#ff9bbf', b: '#c89bff' },
@@ -47,7 +46,7 @@ Odpovedz VÝHRADNE vo formáte JSON (bez markdown kódu):
 }
 
 export async function generateStoryGrok(input: GenerateInput): Promise<GeneratedStory> {
-  const res = await grok.chat.completions.create({
+  const res = await getGrok().chat.completions.create({
     model: 'grok-3-mini',
     messages: [{ role: 'user', content: buildPrompt(input) }],
     temperature: 0.9,

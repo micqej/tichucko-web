@@ -7,6 +7,7 @@ import StoriesSection from '@/components/StoriesSection'
 import ValuesSection from '@/components/ValuesSection'
 import SubscribeSection from '@/components/SubscribeSection'
 import AgesClient from '@/components/AgesClient'
+import HeroButtons from '@/components/HeroButtons'
 
 async function getStories(): Promise<Story[]> {
   try {
@@ -61,24 +62,7 @@ export default async function Home() {
               dôvere, odvahe, úcte a láske k sebe samému.
             </p>
 
-            <div style={{ display: 'flex', gap: 12, marginTop: 28, flexWrap: 'wrap' }}>
-              <a href="#vekove" style={{
-                display: 'inline-flex', alignItems: 'center', gap: 10,
-                padding: '14px 22px', borderRadius: 999, fontWeight: 700, fontSize: 15,
-                background: 'var(--ink)', color: 'var(--bg)',
-                boxShadow: 'var(--shadow)', transition: 'transform .15s ease',
-              }}
-                onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => { e.currentTarget.style.transform = 'translateY(-2px)' }}
-                onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => { e.currentTarget.style.transform = '' }}
-              >Vyberte si vek dieťatka →</a>
-
-              <a href="#odoberat" style={{
-                display: 'inline-flex', alignItems: 'center', gap: 10,
-                padding: '14px 22px', borderRadius: 999, fontWeight: 700, fontSize: 15,
-                background: 'rgba(31,34,71,.06)', color: 'var(--ink)',
-                transition: 'transform .15s ease',
-              }}>🌙 Odoberať zadarmo</a>
-            </div>
+            <HeroButtons />
           </div>
 
           {/* Hero art */}

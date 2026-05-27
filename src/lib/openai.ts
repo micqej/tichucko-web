@@ -2,7 +2,10 @@ import OpenAI from 'openai'
 import type { AgeId, StoryPage } from './types'
 import { AGE_CATEGORIES } from './data'
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+// Lazy — avoids missing-key errors at build time
+function getClient() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+}
 
 export interface GenerateInput {
   ageId: AgeId
@@ -59,7 +62,7 @@ Odpovedz VÝHRADNE vo formáte JSON (bez markdown):
 }
 
 export async function generateStoryOpenAI(input: GenerateInput): Promise<GeneratedStory> {
-  const res = await client.chat.completions.create({
+  const res = await getClient().chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [{ role: 'user', content: buildPrompt(input) }],
     response_format: { type: 'json_object' },

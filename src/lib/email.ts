@@ -2,15 +2,15 @@ import { Resend } from 'resend'
 import type { Story } from './types'
 import { AGE_CATEGORIES } from './data'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-const FROM = process.env.RESEND_FROM ?? 'Tichučko <rozpravky@tichucko.sk>'
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tichucko.sk'
+const getResend = () => new Resend(process.env.RESEND_API_KEY)
+const FROM = () => process.env.RESEND_FROM ?? 'Tichučko <rozpravky@tichucko.sk>'
+const APP_URL = () => process.env.NEXT_PUBLIC_APP_URL ?? 'https://tichucko.sk'
 
 export async function sendDailyStory(story: Story, emails: string[]) {
   if (emails.length === 0) return { sent: 0 }
 
   const age = AGE_CATEGORIES.find(a => a.id === story.age_id)
-  const storyUrl = `${APP_URL}/story/${story.id}`
+  const storyUrl = `${APP_URL()}/story/${story.id}`
   const firstPage = story.pages.find(p => p.type === 'chapter')
   const preview = firstPage?.body?.[0]?.slice(0, 120) ?? ''
 
@@ -20,9 +20,9 @@ export async function sendDailyStory(story: Story, emails: string[]) {
   const chunks = chunkArray(emails, 50)
   let sent = 0
   for (const chunk of chunks) {
-    await resend.batch.send(
+    await getResend().batch.send(
       chunk.map(email => ({
-        from: FROM,
+        from: FROM(),
         to: email,
         subject: `🌙 ${story.title} — rozprávka na dobrú noc`,
         html,
@@ -34,9 +34,9 @@ export async function sendDailyStory(story: Story, emails: string[]) {
 }
 
 export async function sendWelcomeEmail(email: string, unsubscribeToken: string) {
-  const unsubUrl = `${APP_URL}/api/unsubscribe?token=${unsubscribeToken}`
-  await resend.emails.send({
-    from: FROM,
+  const unsubUrl = `${APP_URL()}/api/unsubscribe?token=${unsubscribeToken}`
+  await getResend().emails.send({
+    from: FROM(),
     to: email,
     subject: '🌙 Vitaj v Tichučku — každý večer nová rozprávka',
     html: `
@@ -60,7 +60,7 @@ function buildEmailHtml({ story, age, storyUrl, preview }: {
   storyUrl: string
   preview: string
 }) {
-  const unsubUrl = `${APP_URL}/api/unsubscribe?email={{email}}`
+  const unsubUrl = `${APP_URL()}/api/unsubscribe?email={{email}}`
   return `<!DOCTYPE html>
 <html lang="sk">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

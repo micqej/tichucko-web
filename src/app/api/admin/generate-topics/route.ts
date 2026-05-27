@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server'
 import type { AgeId } from '@/lib/types'
 import { AGE_CATEGORIES } from '@/lib/data'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const getOpenAI = () => new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 export async function POST(req: NextRequest) {
   const { age_id, count = 10 } = await req.json()
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   console.log(`[POST /api/admin/generate-topics] age=${age_id} count=${count}`)
 
   try {
-    const res = await openai.chat.completions.create({
+    const res = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [{
         role: 'user',
