@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import type { AgeCategory, Topic } from '@/lib/types'
 import { LENGTH_SPECS } from '@/lib/openai'
 import type { StoryLength } from '@/lib/openai'
@@ -9,6 +9,7 @@ interface Props {
   unusedTopics: Topic[]
   preselectedTopic: Topic | null
   preselectedTopicIds?: string[]
+  defaultProvider?: Provider
 }
 
 type Provider = 'openai' | 'claude' | 'groq'
@@ -33,7 +34,7 @@ const LENGTH_OPTIONS: [StoryLength, string, string][] = [
   ['long',   '📚 Dlhá',   '~900 slov · 6 min'],
 ]
 
-export default function GenerateClient({ ages, unusedTopics, preselectedTopic, preselectedTopicIds }: Props) {
+export default function GenerateClient({ ages, unusedTopics, preselectedTopic, preselectedTopicIds, defaultProvider = 'openai' }: Props) {
   const [mode, setMode] = useState<'single' | 'bulk'>(
     preselectedTopicIds && preselectedTopicIds.length > 1 ? 'bulk' : 'single'
   )
@@ -43,7 +44,7 @@ export default function GenerateClient({ ages, unusedTopics, preselectedTopic, p
   const [theme, setTheme]               = useState(preselectedTopic?.theme ?? '')
   const [keywords, setKeywords]         = useState(preselectedTopic?.keywords ?? '')
   const [moral, setMoral]               = useState(preselectedTopic?.moral_lesson ?? '')
-  const [provider, setProvider]         = useState<Provider>('openai')
+  const [provider, setProvider]         = useState<Provider>(defaultProvider)
   const [length, setLength]             = useState<StoryLength>('medium')
   const [selectedTopicId, setSelectedTopicId] = useState(preselectedTopic?.id ?? '')
   const [singleStatus, setSingleStatus] = useState<SingleStatus>('idle')
@@ -56,21 +57,7 @@ export default function GenerateClient({ ages, unusedTopics, preselectedTopic, p
     new Set(preselectedTopicIds ?? [])
   )
   const [bulkFilterAge, setBulkFilterAge] = useState('all')
-  const [bulkProvider, setBulkProvider]   = useState<Provider>('openai')
-
-  // ── Load default provider from settings ───────────────────────
-  useEffect(() => {
-    fetch('/api/admin/settings')
-      .then(r => r.json())
-      .then(d => {
-        const p = d.settings?.ai_provider as Provider | undefined
-        if (p && ['openai', 'claude', 'groq'].includes(p)) {
-          setProvider(p)
-          setBulkProvider(p)
-        }
-      })
-      .catch(() => {})
-  }, [])
+  const [bulkProvider, setBulkProvider]   = useState<Provider>(defaultProvider)
   const [bulkLength, setBulkLength]       = useState<StoryLength>('medium')
   const [bulkItems, setBulkItems]         = useState<BulkItem[]>([])
   const [bulkRunning, setBulkRunning]     = useState(false)

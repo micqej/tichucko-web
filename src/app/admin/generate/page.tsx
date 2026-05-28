@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase'
+import { getSetting } from '@/lib/settings'
 import { AGE_CATEGORIES } from '@/lib/data'
 import GenerateClient from './GenerateClient'
 
@@ -13,9 +14,10 @@ export default async function GeneratePage({
   // Parse multiple topic IDs from bulk link (e.g. topicIds=id1,id2,id3)
   const bulkIds = topicIds ? topicIds.split(',').filter(Boolean) : []
 
-  const [topicsRes, topicRes] = await Promise.all([
+  const [topicsRes, topicRes, defaultProvider] = await Promise.all([
     db.from('topics').select('*').eq('used', false).order('priority', { ascending: false }).limit(100),
     topicId ? db.from('topics').select('*').eq('id', topicId).single() : Promise.resolve({ data: null }),
+    getSetting('ai_provider'),
   ])
 
   return (
@@ -29,6 +31,7 @@ export default async function GeneratePage({
         unusedTopics={topicsRes.data ?? []}
         preselectedTopic={topicRes.data}
         preselectedTopicIds={bulkIds.length > 0 ? bulkIds : undefined}
+        defaultProvider={(defaultProvider as 'openai' | 'claude' | 'groq') ?? 'openai'}
       />
     </div>
   )
