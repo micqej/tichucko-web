@@ -43,8 +43,10 @@ export async function POST(req: NextRequest) {
 
     console.log(`[POST /api/admin/generate] Success: "${story.title}"`)
     return Response.json({ story })
-  } catch (err) {
-    console.error('[POST /api/admin/generate] Generation failed:', err)
-    return Response.json({ error: 'Generovanie zlyhalo. Skontroluj API kľúč v Nastaveniach.' }, { status: 500 })
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[POST /api/admin/generate] Generation failed:', msg)
+    // Return the real error so the admin can diagnose the problem
+    return Response.json({ error: `Generovanie zlyhalo: ${msg}` }, { status: 500 })
   }
 }

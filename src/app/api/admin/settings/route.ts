@@ -1,7 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import type { NextRequest } from 'next/server'
 
-const API_KEY_KEYS = ['openai_api_key', 'claude_api_key', 'grok_api_key', 'resend_api_key', 'smtp_password']
+const API_KEY_KEYS = ['openai_api_key', 'claude_api_key', 'groq_api_key', 'resend_api_key', 'smtp_password']
 
 function maskSecret(key: string, value: string): string {
   if (!API_KEY_KEYS.includes(key) || !value) return value
