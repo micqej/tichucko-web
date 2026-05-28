@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { AgeCategory, Topic } from '@/lib/types'
 import { LENGTH_SPECS } from '@/lib/openai'
 import type { StoryLength } from '@/lib/openai'
@@ -57,6 +57,20 @@ export default function GenerateClient({ ages, unusedTopics, preselectedTopic, p
   )
   const [bulkFilterAge, setBulkFilterAge] = useState('all')
   const [bulkProvider, setBulkProvider]   = useState<Provider>('openai')
+
+  // ── Load default provider from settings ───────────────────────
+  useEffect(() => {
+    fetch('/api/admin/settings')
+      .then(r => r.json())
+      .then(d => {
+        const p = d.settings?.ai_provider as Provider | undefined
+        if (p && ['openai', 'claude', 'groq'].includes(p)) {
+          setProvider(p)
+          setBulkProvider(p)
+        }
+      })
+      .catch(() => {})
+  }, [])
   const [bulkLength, setBulkLength]       = useState<StoryLength>('medium')
   const [bulkItems, setBulkItems]         = useState<BulkItem[]>([])
   const [bulkRunning, setBulkRunning]     = useState(false)
