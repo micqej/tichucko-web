@@ -5,10 +5,10 @@ const SECTIONS = [
   {
     title: '🤖 AI Generátor',
     fields: [
-      { key: 'ai_provider', label: 'Aktívny AI provider', type: 'select', options: ['openai', 'claude', 'grok'] },
+      { key: 'ai_provider', label: 'Aktívny AI provider', type: 'select', options: ['openai', 'claude', 'groq'] },
       { key: 'openai_api_key', label: 'OpenAI API kľúč', type: 'password', placeholder: 'sk-proj-...' },
       { key: 'claude_api_key', label: 'Claude (Anthropic) API kľúč', type: 'password', placeholder: 'sk-ant-...' },
-      { key: 'grok_api_key', label: 'Grok (xAI) API kľúč', type: 'password', placeholder: 'xai-...' },
+      { key: 'groq_api_key', label: 'Groq API kľúč (groq.com)', type: 'password', placeholder: 'gsk_...' },
     ],
   },
   {

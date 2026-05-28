@@ -7,18 +7,95 @@ interface Props {
   ages: AgeCategory[]
 }
 
+interface EditState {
+  theme: string
+  keywords: string
+  moral_lesson: string
+}
+
 export default function TopicsClient({ topics: initial, ages }: Props) {
-  const [topics, setTopics] = useState(initial)
-  const [filter, setFilter] = useState<string>('all')
+  const [topics, setTopics]           = useState(initial)
+  const [filter, setFilter]           = useState<string>('all')
   const [importStatus, setImportStatus] = useState<string>('')
-  const [aiStatus, setAiStatus] = useState<string>('')
-  const [aiAge, setAiAge] = useState<string>(ages[2].id)
-  const [aiCount, setAiCount] = useState(10)
-  const [newTopic, setNewTopic] = useState<{ age_id: string; theme: string; keywords: string; moral_lesson: string }>({ age_id: ages[0].id, theme: '', keywords: '', moral_lesson: '' })
+  const [aiStatus, setAiStatus]       = useState<string>('')
+  const [aiAge, setAiAge]             = useState<string>(ages[2].id)
+  const [aiCount, setAiCount]         = useState(10)
+  const [newTopic, setNewTopic]       = useState<{ age_id: string; theme: string; keywords: string; moral_lesson: string }>({ age_id: ages[0].id, theme: '', keywords: '', moral_lesson: '' })
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const filtered = filter === 'all' ? topics : filter === 'unused' ? topics.filter(t => !t.used) : topics.filter(t => t.age_id === filter)
+  // Multi-select
+  const [selected, setSelected]       = useState<Set<string>>(new Set())
 
+  // Inline edit
+  const [editingId, setEditingId]     = useState<string | null>(null)
+  const [editState, setEditState]     = useState<EditState>({ theme: '', keywords: '', moral_lesson: '' })
+  const [savingId, setSavingId]       = useState<string | null>(null)
+  const [deletingId, setDeletingId]   = useState<string | null>(null)
+
+  const filtered = (() => {
+    if (filter === 'all')    return topics
+    if (filter === 'unused') return topics.filter(t => !t.used)
+    return topics.filter(t => t.age_id === filter)
+  })()
+
+  const unusedFiltered = filtered.filter(t => !t.used)
+
+  // ── Multi-select helpers ──────────────────────────────────────
+  function toggleSelect(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function selectAllVisible() {
+    setSelected(new Set(unusedFiltered.map(t => t.id)))
+  }
+
+  function deselectAll() {
+    setSelected(new Set())
+  }
+
+  // ── Inline edit ───────────────────────────────────────────────
+  function startEdit(t: Topic) {
+    setEditingId(t.id)
+    setEditState({ theme: t.theme, keywords: t.keywords ?? '', moral_lesson: t.moral_lesson ?? '' })
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+  }
+
+  async function saveEdit(id: string) {
+    setSavingId(id)
+    const res = await fetch('/api/admin/topics', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...editState }),
+    })
+    const data = await res.json()
+    if (res.ok) {
+      setTopics(ts => ts.map(t => t.id === id ? { ...t, ...editState } : t))
+    } else {
+      alert(data.error ?? 'Uloženie zlyhalo')
+    }
+    setSavingId(null)
+    setEditingId(null)
+  }
+
+  async function deleteTopic(id: string) {
+    if (!confirm('Vymazať tému?')) return
+    setDeletingId(id)
+    const res = await fetch(`/api/admin/topics?id=${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      setTopics(ts => ts.filter(t => t.id !== id))
+      setSelected(prev => { const next = new Set(prev); next.delete(id); return next })
+    }
+    setDeletingId(null)
+  }
+
+  // ── Import / AI generate / manual add ────────────────────────
   async function importCsv(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -70,10 +147,19 @@ export default function TopicsClient({ topics: initial, ages }: Props) {
     }
   }
 
+  // ── Bulk generate link ────────────────────────────────────────
+  const bulkGenerateHref = `/admin/generate?topicIds=${[...selected].join(',')}`
+
+  // ── Styles ────────────────────────────────────────────────────
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '10px 13px', borderRadius: 9,
     background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.12)',
     color: '#fff', fontSize: 14, fontFamily: 'inherit', outline: 'none',
+  }
+  const inlineInputStyle: React.CSSProperties = {
+    padding: '6px 10px', borderRadius: 7,
+    background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.18)',
+    color: '#fff', fontSize: 13, fontFamily: 'inherit', outline: 'none', width: '100%',
   }
   const labelStyle: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 700, color: '#7a7faa', marginBottom: 6 }
 
@@ -81,45 +167,170 @@ export default function TopicsClient({ topics: initial, ages }: Props) {
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24 }}>
       {/* Left: topic list */}
       <div>
-        {/* Filter */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-          {[['all', 'Všetky'], ['unused', 'Nepoužité'], ...ages.map(a => [a.id, `${a.emoji} ${a.range}`])].map(([v, l]) => (
-            <button key={v} onClick={() => setFilter(v)} style={{
-              padding: '7px 14px', borderRadius: 999, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer',
-              background: filter === v ? '#c89bff' : 'rgba(255,255,255,.08)',
-              color: filter === v ? '#1f2247' : '#cdc7e0',
-            }}>{l}</button>
-          ))}
+        {/* Filter + selection bar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {[['all', 'Všetky'], ['unused', 'Nepoužité'], ...ages.map(a => [a.id, `${a.emoji} ${a.range}`])].map(([v, l]) => (
+              <button key={v} onClick={() => setFilter(v)} style={{
+                padding: '6px 13px', borderRadius: 999, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer',
+                background: filter === v ? '#c89bff' : 'rgba(255,255,255,.08)',
+                color: filter === v ? '#1f2247' : '#cdc7e0',
+              }}>{l}</button>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {selected.size > 0 && (
+              <>
+                <span style={{ fontSize: 13, color: '#c89bff', fontWeight: 700 }}>
+                  Vybrané: {selected.size}
+                </span>
+                <a href={bulkGenerateHref} style={{
+                  padding: '7px 14px', borderRadius: 10, background: '#c89bff', color: '#1f2247',
+                  fontWeight: 800, fontSize: 13, textDecoration: 'none',
+                }}>
+                  ⚡ Generovať vybrané →
+                </a>
+                <button onClick={deselectAll} style={{
+                  padding: '7px 12px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                  background: 'rgba(255,255,255,.06)', color: '#7a7faa', fontSize: 12, fontWeight: 600,
+                }}>
+                  Zrušiť
+                </button>
+              </>
+            )}
+            {selected.size === 0 && unusedFiltered.length > 0 && (
+              <button onClick={selectAllVisible} style={{
+                padding: '7px 14px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                background: 'rgba(200,155,255,.12)', color: '#c89bff', fontSize: 12, fontWeight: 700,
+              }}>
+                ☐ Vybrať všetky ({unusedFiltered.length})
+              </button>
+            )}
+          </div>
         </div>
 
+        {/* Table */}
         <div style={{ background: '#1a1f48', borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(255,255,255,.07)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,.1)' }}>
-                {['Vek', 'Téma', 'Ponaučenie', ''].map((h, i) => (
+                {['', 'Vek', 'Téma', 'Ponaučenie', 'Akcie'].map((h, i) => (
                   <th key={i} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 800, color: '#7a7faa', letterSpacing: '.07em', textTransform: 'uppercase' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.map(t => {
-                const age = ages.find(a => a.id === t.age_id)
+                const age     = ages.find(a => a.id === t.age_id)
+                const isEditing = editingId === t.id
+                const isDeleting = deletingId === t.id
+
                 return (
-                  <tr key={t.id} style={{ borderBottom: '1px solid rgba(255,255,255,.04)', opacity: t.used ? .45 : 1 }}>
-                    <td style={{ padding: '10px 14px' }}>
+                  <tr key={t.id} style={{
+                    borderBottom: '1px solid rgba(255,255,255,.04)',
+                    opacity: t.used || isDeleting ? .45 : 1,
+                    background: selected.has(t.id) ? 'rgba(200,155,255,.07)' : 'transparent',
+                    transition: '.2s',
+                  }}>
+                    {/* Checkbox */}
+                    <td style={{ padding: '10px 10px 10px 14px', width: 32 }}>
+                      {!t.used && (
+                        <input
+                          type="checkbox"
+                          checked={selected.has(t.id)}
+                          onChange={() => toggleSelect(t.id)}
+                          style={{ accentColor: '#c89bff', width: 15, height: 15, cursor: 'pointer' }}
+                        />
+                      )}
+                    </td>
+
+                    {/* Age badge */}
+                    <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                       <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: (age?.color ?? '#7cc6ff') + '22', color: age?.color ?? '#7cc6ff' }}>
                         {age?.range}
                       </span>
                     </td>
+
+                    {/* Theme + keywords — editable inline */}
                     <td style={{ padding: '10px 14px' }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#f6f1e1' }}>{t.theme}</div>
-                      {t.keywords && <div style={{ fontSize: 11, color: '#7a7faa', marginTop: 2 }}>{t.keywords}</div>}
+                      {isEditing ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <input
+                            value={editState.theme}
+                            onChange={e => setEditState(s => ({ ...s, theme: e.target.value }))}
+                            placeholder="Téma"
+                            style={inlineInputStyle}
+                          />
+                          <input
+                            value={editState.keywords}
+                            onChange={e => setEditState(s => ({ ...s, keywords: e.target.value }))}
+                            placeholder="Kľúčové slová"
+                            style={{ ...inlineInputStyle, fontSize: 11 }}
+                          />
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#f6f1e1' }}>{t.theme}</div>
+                          {t.keywords && <div style={{ fontSize: 11, color: '#7a7faa', marginTop: 2 }}>{t.keywords}</div>}
+                        </>
+                      )}
                     </td>
-                    <td style={{ padding: '10px 14px', fontSize: 12, color: '#cdc7e0', maxWidth: 180 }}>{t.moral_lesson}</td>
-                    <td style={{ padding: '10px 14px' }}>
-                      {t.used
-                        ? <span style={{ fontSize: 11, color: '#7a7faa' }}>použitá</span>
-                        : <a href={`/admin/generate?topicId=${t.id}`} style={{ fontSize: 12, color: '#c89bff', fontWeight: 600 }}>Generovať →</a>}
+
+                    {/* Moral — editable inline */}
+                    <td style={{ padding: '10px 14px', fontSize: 12, color: '#cdc7e0', maxWidth: 200 }}>
+                      {isEditing ? (
+                        <input
+                          value={editState.moral_lesson}
+                          onChange={e => setEditState(s => ({ ...s, moral_lesson: e.target.value }))}
+                          placeholder="Ponaučenie"
+                          style={inlineInputStyle}
+                        />
+                      ) : (
+                        t.moral_lesson
+                      )}
+                    </td>
+
+                    {/* Actions */}
+                    <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                      {isEditing ? (
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button
+                            onClick={() => saveEdit(t.id)}
+                            disabled={savingId === t.id}
+                            style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 7, border: 'none', cursor: 'pointer', background: '#9be59b', color: '#1f2247' }}
+                          >
+                            {savingId === t.id ? '…' : '✓ Uložiť'}
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            style={{ fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 7, border: 'none', cursor: 'pointer', background: 'rgba(255,255,255,.08)', color: '#cdc7e0' }}
+                          >
+                            Zrušiť
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                          {t.used ? (
+                            <span style={{ fontSize: 11, color: '#7a7faa' }}>použitá</span>
+                          ) : (
+                            <a href={`/admin/generate?topicId=${t.id}`} style={{ fontSize: 12, color: '#c89bff', fontWeight: 600 }}>Generovať →</a>
+                          )}
+                          <button
+                            onClick={() => startEdit(t)}
+                            style={{ fontSize: 12, color: '#7cc6ff', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                          >
+                            Upraviť
+                          </button>
+                          <button
+                            onClick={() => deleteTopic(t.id)}
+                            disabled={isDeleting}
+                            style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                          >
+                            {isDeleting ? '…' : 'Zmazať'}
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )
@@ -130,7 +341,7 @@ export default function TopicsClient({ topics: initial, ages }: Props) {
         </div>
       </div>
 
-      {/* Right: add tools */}
+      {/* Right: tools */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Import CSV */}
         <div style={{ background: '#1a1f48', borderRadius: 14, padding: 20, border: '1px solid rgba(255,255,255,.07)' }}>

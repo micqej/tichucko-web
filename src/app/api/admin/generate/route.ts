@@ -1,28 +1,34 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { generateStoryOpenAI } from '@/lib/openai'
-import { generateStoryGrok } from '@/lib/grok'
+import { generateStoryGroq } from '@/lib/groq'
 import { generateStoryClaude } from '@/lib/claude'
 import { getApiKey, getSetting } from '@/lib/settings'
 import type { NextRequest } from 'next/server'
 import type { AgeId } from '@/lib/types'
+import type { StoryLength } from '@/lib/openai'
 
 export async function POST(req: NextRequest) {
-  const { ageId, theme, keywords, moralLesson, provider: reqProvider, topicId } = await req.json()
+  const { ageId, theme, keywords, moralLesson, provider: reqProvider, topicId, length } = await req.json()
 
   if (!ageId || !theme) {
     return Response.json({ error: 'Chýba vek alebo téma.' }, { status: 400 })
   }
 
-  // Use explicit provider from request, or fall back to admin settings default
   const provider = reqProvider || (await getSetting('ai_provider')) || 'openai'
-  const input = { ageId: ageId as AgeId, theme, keywords, moralLesson }
-  console.log(`[POST /api/admin/generate] provider=${provider} age=${ageId} theme="${theme}"`)
+  const input = {
+    ageId: ageId as AgeId,
+    theme,
+    keywords,
+    moralLesson,
+    length: (length as StoryLength) || 'medium',
+  }
+  console.log(`[POST /api/admin/generate] provider=${provider} age=${ageId} length=${input.length} theme="${theme}"`)
 
   try {
     let story
-    if (provider === 'grok') {
-      const apiKey = await getApiKey('grok_api_key', 'GROK_API_KEY')
-      story = await generateStoryGrok(input, apiKey)
+    if (provider === 'groq') {
+      const apiKey = await getApiKey('groq_api_key', 'GROQ_API_KEY')
+      story = await generateStoryGroq(input, apiKey)
     } else if (provider === 'claude') {
       const apiKey = await getApiKey('claude_api_key', 'CLAUDE_API_KEY')
       story = await generateStoryClaude(input, apiKey)
