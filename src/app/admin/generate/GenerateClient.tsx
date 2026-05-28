@@ -13,7 +13,7 @@ export default function GenerateClient({ ages, unusedTopics, preselectedTopic }:
   const [theme, setTheme] = useState(preselectedTopic?.theme ?? '')
   const [keywords, setKeywords] = useState(preselectedTopic?.keywords ?? '')
   const [moral, setMoral] = useState(preselectedTopic?.moral_lesson ?? '')
-  const [provider, setProvider] = useState<'openai' | 'grok'>('openai')
+  const [provider, setProvider] = useState<'openai' | 'claude' | 'grok'>('openai')
   const [selectedTopicId, setSelectedTopicId] = useState(preselectedTopic?.id ?? '')
   const [status, setStatus] = useState<'idle' | 'generating' | 'preview' | 'publishing' | 'done' | 'error'>('idle')
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
@@ -136,12 +136,17 @@ export default function GenerateClient({ ages, unusedTopics, preselectedTopic }:
 
         <div style={{ marginBottom: 24 }}>
           <label style={labelStyle}>AI motor</label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {[['openai', '🤖 OpenAI GPT-4o-mini'], ['grok', '⚡ xAI Grok (zadarmo)']].map(([v, l]) => (
-              <button key={v} onClick={() => setProvider(v as 'openai' | 'grok')} style={{
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {([
+              ['openai', '🤖 OpenAI'],
+              ['claude', '🟠 Claude'],
+              ['grok', '⚡ Grok'],
+            ] as const).map(([v, l]) => (
+              <button key={v} onClick={() => setProvider(v)} style={{
                 flex: 1, padding: '9px', borderRadius: 10, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer',
                 background: provider === v ? '#ffd47a' : 'rgba(255,255,255,.08)',
                 color: provider === v ? '#1f2247' : '#cdc7e0',
+                minWidth: 80,
               }}>{l}</button>
             ))}
           </div>

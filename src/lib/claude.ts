@@ -1,18 +1,13 @@
-// xAI Grok uses OpenAI-compatible API
-import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 import type { AgeId } from './types'
 import type { GenerateInput, GeneratedStory } from './openai'
 import { AGE_CATEGORIES } from './data'
 
-function getGrok(apiKey?: string) {
-  return new OpenAI({ apiKey: apiKey || process.env.GROK_API_KEY, baseURL: 'https://api.x.ai/v1' })
-}
-
 const COVER_PALETTES: Record<AgeId, { a: string; b: string }> = {
-  a02: { a: '#ff9bbf', b: '#c89bff' },
-  a24: { a: '#ffb347', b: '#ff9bbf' },
-  a47: { a: '#9be59b', b: '#7cc6ff' },
-  a710: { a: '#7cc6ff', b: '#c89bff' },
+  a02:   { a: '#ff9bbf', b: '#c89bff' },
+  a24:   { a: '#ffb347', b: '#ff9bbf' },
+  a47:   { a: '#9be59b', b: '#7cc6ff' },
+  a710:  { a: '#7cc6ff', b: '#c89bff' },
   a1013: { a: '#3a2670', b: '#7cc6ff' },
 }
 
@@ -45,26 +40,32 @@ Odpovedz VÝHRADNE vo formáte JSON (bez markdown kódu):
 }`
 }
 
-export async function generateStoryGrok(input: GenerateInput, apiKey?: string): Promise<GeneratedStory> {
-  const res = await getGrok(apiKey).chat.completions.create({
-    model: 'grok-3-mini',
+export async function generateStoryClaude(input: GenerateInput, apiKey: string): Promise<GeneratedStory> {
+  const client = new Anthropic({ apiKey })
+
+  const msg = await client.messages.create({
+    model: 'claude-opus-4-5',
+    max_tokens: 4096,
     messages: [{ role: 'user', content: buildPrompt(input) }],
-    temperature: 0.9,
   })
 
-  const content = res.choices[0].message.content!
-  // strip possible markdown fences
-  const jsonStr = content.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim()
+  const block = msg.content[0]
+  if (block.type !== 'text') throw new Error('Unexpected response type from Claude')
+
+  const jsonStr = block.text
+    .replace(/^```json\n?/, '')
+    .replace(/\n?```$/, '')
+    .trim()
   const raw = JSON.parse(jsonStr)
   const palette = COVER_PALETTES[input.ageId]
 
   return {
-    title: raw.title,
-    emoji: raw.emoji ?? '🌙',
+    title:   raw.title,
+    emoji:   raw.emoji ?? '🌙',
     cover_a: palette.a,
     cover_b: palette.b,
     minutes: 4,
-    author: raw.author ?? '',
-    pages: raw.pages,
+    author:  raw.author ?? '',
+    pages:   raw.pages,
   }
 }
