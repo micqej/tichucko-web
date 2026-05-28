@@ -18,8 +18,8 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) {
-    console.error('[POST /api/admin/stories] DB error:', error.message)
-    return Response.json({ error: 'Uloženie zlyhalo.' }, { status: 500 })
+    console.error('[POST /api/admin/stories] DB error:', error.message, '| code:', error.code)
+    return Response.json({ error: `Uloženie zlyhalo: ${error.message}` }, { status: 500 })
   }
 
   console.log(`[POST /api/admin/stories] Created story id=${data.id} "${title}"`)
