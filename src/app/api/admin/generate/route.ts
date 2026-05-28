@@ -42,7 +42,8 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`[POST /api/admin/generate] Success: "${story.title}"`)
-    return Response.json({ story })
+    // Include age_id and theme so the publish call has all required fields
+    return Response.json({ story: { ...story, age_id: ageId, theme } })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[POST /api/admin/generate] Generation failed:', msg)
