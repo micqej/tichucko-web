@@ -38,10 +38,11 @@ Požiadavky:
 - Dĺžka: ${spec.words} slov (cca ${spec.label} čítania)
 - Počet kapitol: ${spec.chapters}
 - Jazyk: slovenčina, vhodná pre vek ${age.range}
-- Každá kapitola: nadpis + 2–4 odseky
+- Každá kapitola: poetický nadpis BEZ "Kapitola X:" prefixu + 2–4 odseky
 - Posledná stránka: ponaučenie (1–2 vety) a emoji ozdoba
 - Tón: teplý, poetický, upokojujúci
 - Postavy: zvieratká alebo detské postavy s menami
+- DÔLEŽITÉ pre "title": poetický rozprávkový názov — NIE "Rozprávka o X" ale napr. "Šepoty lesa", "Medvedík Ňuňo a mesiac", "Líška Terka hľadá domov"
 
 Odpovedz VÝHRADNE vo formáte JSON (bez markdown):
 {

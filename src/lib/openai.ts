@@ -53,10 +53,11 @@ Požiadavky:
 - Dĺžka: ${spec.words} slov (cca ${spec.label} čítania, ${spec.approxWords})
 - Počet kapitol: ${spec.chapters}
 - Jazyk: slovenčina, vhodná pre vek ${age.range}
-- Každá kapitola má nadpis a 2–4 odseky
+- Každá kapitola má poetický nadpis BEZ predpony "Kapitola X:" a 2–4 odseky
 - Posledná stránka: krátke ponaučenie (1–2 vety) a emoji ozdoba
 - Tón: teplý, poetický, upokojujúci, nie strašidelný
 - Postavy: zvieratká alebo detské postavy s menami
+- DÔLEŽITÉ pre "title": vymysli poetický rozprávkový názov — NIE popisný ("Rozprávka o klamstve", "Odvaha a pravda") ale magický a konkrétny ako "Šepoty hviezd", "Medvedík Ňuňo a stratená nálada", "Hvezdička Alka sa vracia" — krátky, s postavou ak je to možné
 
 Odpovedz VÝHRADNE vo formáte JSON (bez markdown):
 {

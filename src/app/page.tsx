@@ -16,7 +16,7 @@ async function getStories(): Promise<Story[]> {
       .select('*')
       .eq('status', 'published')
       .order('published_at', { ascending: false })
-      .limit(30)
+      .limit(6)
     return (data ?? []) as Story[]
   } catch {
     return []
@@ -95,7 +95,7 @@ export default async function Home() {
       <AgesClient ages={AGE_CATEGORIES} counts={ageCounts} />
 
       {/* STORIES */}
-      <StoriesSection stories={stories} />
+      <StoriesSection stories={stories} showAllLink="/rozpravky" />
 
       {/* VALUES */}
       <ValuesSection />

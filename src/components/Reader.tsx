@@ -177,6 +177,11 @@ export default function Reader({ story, onClose }: Props) {
   )
 }
 
+// Strip AI-generated "Kapitola 1:" / "Chapter 2:" prefixes from headings
+function cleanHeading(h: string): string {
+  return h.replace(/^(?:kapitola|chapter)\s*\d+\s*[:\-–—]?\s*/i, '').trim() || h
+}
+
 function PageContent({ page, story, pageNum, total }: {
   page: { type: 'cover' } | Story['pages'][number]
   story: Story
@@ -226,7 +231,7 @@ function PageContent({ page, story, pageNum, total }: {
   return (
     <div>
       <h3 style={{ fontFamily: 'var(--font-fraunces)', fontSize: 'clamp(20px,3vw,28px)', fontWeight: 900, marginBottom: 18, color: '#5a3a8a' }}>
-        {page.heading}
+        {cleanHeading(page.heading ?? '')}
       </h3>
       <div>
         {page.body?.map((para, i) => (

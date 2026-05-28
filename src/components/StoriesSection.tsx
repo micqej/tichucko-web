@@ -8,9 +8,10 @@ import Reader from './Reader'
 interface Props {
   stories: Story[]
   initialAgeFilter?: string | null
+  showAllLink?: string
 }
 
-export default function StoriesSection({ stories, initialAgeFilter }: Props) {
+export default function StoriesSection({ stories, initialAgeFilter, showAllLink }: Props) {
   const [ageFilter, setAgeFilter] = useState<string | null>(initialAgeFilter ?? null)
   const [openStory, setOpenStory] = useState<Story | null>(null)
 
@@ -35,6 +36,15 @@ export default function StoriesSection({ stories, initialAgeFilter }: Props) {
             <h2 style={{ fontSize: 'clamp(28px,3.4vw,42px)', fontWeight: 900, color: 'var(--ink)' }}>Najnovšie rozprávky</h2>
             <p style={{ color: 'var(--ink-soft)', marginTop: 8, maxWidth: 520 }}>Kliknite na rozprávku a otvorí sa vám kniha s otáčaním stránok.</p>
           </div>
+          {showAllLink && (
+            <a href={showAllLink} style={{
+              padding: '11px 22px', borderRadius: 999, fontWeight: 700, fontSize: 15,
+              background: 'var(--ink)', color: 'var(--bg)', textDecoration: 'none',
+              whiteSpace: 'nowrap', flexShrink: 0,
+            }}>
+              Všetky rozprávky →
+            </a>
+          )}
         </div>
 
         {/* Age filter pills */}

@@ -95,7 +95,7 @@ export default function StoriesClient({ initialStories }: { initialStories: Stor
                   </td>
                   <td style={{ padding: '12px 14px' }}>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                      <a href={`/story/${story.id}`} target="_blank" style={{ fontSize: 12, color: '#7cc6ff', fontWeight: 600 }}>Náhľad</a>
+                      <a href={`/rozpravky/${story.id}`} target="_blank" style={{ fontSize: 12, color: '#7cc6ff', fontWeight: 600 }}>Náhľad</a>
                       <button onClick={() => deleteStory(story.id)} disabled={deleting === story.id} style={{ fontSize: 12, color: '#ff6b6b', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                         {deleting === story.id ? '…' : 'Vymazať'}
                       </button>

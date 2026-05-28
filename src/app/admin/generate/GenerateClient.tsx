@@ -207,7 +207,7 @@ export default function GenerateClient({ ages, unusedTopics, preselectedTopic, p
           Rozprávka je živá!
         </h2>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24, flexWrap: 'wrap' }}>
-          <a href={`/story/${publishedId}`} target="_blank" style={{ padding: '11px 20px', borderRadius: 12, background: '#c89bff', color: '#1f2247', fontWeight: 700, fontSize: 14 }}>
+          <a href={`/rozpravky/${publishedId}`} target="_blank" style={{ padding: '11px 20px', borderRadius: 12, background: '#c89bff', color: '#1f2247', fontWeight: 700, fontSize: 14 }}>
             📖 Zobraziť
           </a>
           <button onClick={() => { setSingleStatus('idle'); setResult(null); setTheme(''); setSelectedTopicId('') }} style={{ padding: '11px 20px', borderRadius: 12, background: 'rgba(255,255,255,.08)', color: '#f6f1e1', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}>

@@ -55,7 +55,7 @@ export async function sendDailyStorySMTP(
 
   const age = AGE_CATEGORIES.find(a => a.id === story.age_id)
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tichucko.sk'
-  const storyUrl = `${appUrl}/story/${story.id}`
+  const storyUrl = `${appUrl}/rozpravky/${story.id}`
   const firstPage = story.pages.find(p => p.type === 'chapter')
   const preview = firstPage?.body?.[0]?.slice(0, 120) ?? ''
 

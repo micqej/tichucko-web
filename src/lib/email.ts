@@ -39,7 +39,7 @@ export async function sendDailyStory(story: Story, subscribers: Array<{ email: s
   const resend = new Resend(resendKey)
 
   const age = AGE_CATEGORIES.find(a => a.id === story.age_id)
-  const storyUrl = `${APP_URL()}/story/${story.id}`
+  const storyUrl = `${APP_URL()}/rozpravky/${story.id}`
   const firstPage = story.pages.find(p => p.type === 'chapter')
   const preview = firstPage?.body?.[0]?.slice(0, 120) ?? ''
   const html = buildEmailHtml({ story, age, storyUrl, preview })
