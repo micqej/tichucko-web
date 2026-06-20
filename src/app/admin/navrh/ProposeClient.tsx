@@ -1,10 +1,31 @@
 'use client'
 import { useState } from 'react'
-import type { AgeCategory, AgeId } from '@/lib/types'
+import type { AgeCategory, AgeId, Topic } from '@/lib/types'
 
 interface Proposal { age_id: AgeId; theme: string; keywords: string; moral_lesson: string; keep: boolean }
 
-export default function ProposeClient({ ages, autoApprove }: { ages: AgeCategory[]; autoApprove: boolean }) {
+export default function ProposeClient({ ages, autoApprove, queue: initialQueue }: { ages: AgeCategory[]; autoApprove: boolean; queue: Topic[] }) {
+  const [queue, setQueue] = useState<Topic[]>(initialQueue)
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const [clearing, setClearing] = useState(false)
+  const [queueFilter, setQueueFilter] = useState<string>('all')
+
+  async function delTopic(id: string) {
+    setDeleting(id)
+    const res = await fetch(`/api/admin/topics?id=${id}`, { method: 'DELETE' })
+    if (res.ok) setQueue(prev => prev.filter(t => t.id !== id))
+    setDeleting(null)
+  }
+
+  async function clearQueue() {
+    if (!confirm(`Naozaj zmazať všetkých ${queue.length} tém vo fronte?`)) return
+    setClearing(true)
+    const ids = queue.map(t => t.id)
+    for (const id of ids) { await fetch(`/api/admin/topics?id=${id}`, { method: 'DELETE' }) }
+    setQueue([])
+    setClearing(false)
+  }
+
   const [selected, setSelected] = useState<Set<AgeId>>(new Set([ages[1].id]))
   const [count, setCount] = useState(5)
   const [proposals, setProposals] = useState<Proposal[]>([])
@@ -53,6 +74,7 @@ export default function ProposeClient({ ages, autoApprove }: { ages: AgeCategory
       if (!res.ok) throw new Error(d.error || 'Uloženie zlyhalo')
       setSavedMsg(`✓ Schválených ${d.count} tém — pridané do fronty.`)
       setSavedTopics(d.topics ?? [])
+      setQueue(prev => [...((d.topics ?? []) as Topic[]), ...prev])
       setGen({ done: 0, total: 0, running: false, finished: false })
       setProposals([])
     } catch (e) { setError(e instanceof Error ? e.message : 'Chyba') }
@@ -79,6 +101,7 @@ export default function ProposeClient({ ages, autoApprove }: { ages: AgeCategory
           })
         }
       } catch { /* pokračuj ďalej */ }
+      setQueue(prev => prev.filter(q => q.id !== t.id)) // téma sa minula
       done++
       setGen({ done, total: savedTopics.length, running: true, finished: false })
     }
@@ -185,8 +208,47 @@ export default function ProposeClient({ ages, autoApprove }: { ages: AgeCategory
           Schválené témy idú do fronty. Každé ráno z nich worker vyrobí rozprávku (hlbokú, sezónnu){autoApprove
             ? <> a keďže máš <strong>auto-schvaľovanie zapnuté</strong>, večer sa rovno odošle odberateľom.</>
             : <> a pošle ti ju na <strong>schválenie</strong>; po kliknutí sa večer odošle. (Ak chceš úplnú automatiku bez klikania, zapni <a href="/admin/settings" style={{ color: '#7cc6ff' }}>auto-schvaľovanie v Nastaveniach</a>.)</>}
-          {' '}Keď tém ubúda, dopĺňajú sa samé. Pozri <a href="/admin/calendar" style={{ color: '#7cc6ff' }}>kalendár</a> alebo <a href="/admin/topics" style={{ color: '#7cc6ff' }}>frontu tém</a>.
+          {' '}Keď tém ubúda, dopĺňajú sa samé. Schválené témy a kalendár vidíš nižšie.
         </div>
+      </div>
+
+      {/* Fronta tém — správa a mazanie */}
+      <div style={card}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
+          <h2 style={{ fontFamily: 'var(--font-fraunces)', fontSize: 18, fontWeight: 900 }}>📋 Fronta tém ({queue.length})</h2>
+          {queue.length > 0 && (
+            <button onClick={clearQueue} disabled={clearing} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', cursor: clearing ? 'wait' : 'pointer', background: 'rgba(255,120,120,.15)', color: '#ff9b9b', fontWeight: 700, fontSize: 13, fontFamily: 'inherit' }}>
+              {clearing ? 'Mažem…' : '🗑️ Vyčistiť frontu'}
+            </button>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+          {[['all', 'Všetky'] as [string, string], ...ages.map(a => [a.id, `${a.emoji} ${a.range}`] as [string, string])].map(([v, l]) => (
+            <button key={v} onClick={() => setQueueFilter(v)} style={{
+              padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer',
+              background: queueFilter === v ? '#c89bff' : 'rgba(255,255,255,.08)', color: queueFilter === v ? '#1f2247' : '#cdc7e0',
+            }}>{l}</button>
+          ))}
+        </div>
+        {queue.length === 0 ? (
+          <p style={{ color: '#7a7faa', fontSize: 13 }}>Fronta je prázdna — navrhni nové témy vyššie.</p>
+        ) : (
+          <div style={{ maxHeight: 420, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {(queueFilter === 'all' ? queue : queue.filter(t => t.age_id === queueFilter)).map(t => {
+              const a = ageOf(t.age_id)
+              return (
+                <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.06)' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: (a?.color ?? '#7cc6ff') + '22', color: a?.color ?? '#7cc6ff', flexShrink: 0 }}>{a?.emoji} {a?.range}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#f6f1e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.theme}</div>
+                    {t.keywords && <div style={{ fontSize: 11, color: '#7a7faa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.keywords}</div>}
+                  </div>
+                  <button onClick={() => delTopic(t.id)} disabled={deleting === t.id} style={{ flexShrink: 0, padding: '6px 10px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'rgba(255,120,120,.12)', color: '#ff9b9b', fontWeight: 700, fontSize: 12, fontFamily: 'inherit' }}>{deleting === t.id ? '…' : '🗑️'}</button>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )
