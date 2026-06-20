@@ -35,6 +35,21 @@ async function winningThemes(ageId: AgeId): Promise<string[]> {
 
 export type TopicProposal = { theme: string; keywords: string; moral_lesson: string }
 
+// Vytiahne pole tém z ľubovoľného tvaru JSON odpovede (objekt s kľúčom, holé pole, alebo jeden objekt).
+function extractItems(raw: unknown): Array<Record<string, string>> {
+  if (Array.isArray(raw)) return raw as Array<Record<string, string>>
+  if (raw && typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>
+    for (const k of ['topics', 'items', 'themes', 'results', 'data']) {
+      if (Array.isArray(obj[k])) return obj[k] as Array<Record<string, string>>
+    }
+    const anyArr = Object.values(obj).find(v => Array.isArray(v))
+    if (anyArr) return anyArr as Array<Record<string, string>>
+    if ('theme' in obj) return [obj as Record<string, string>]
+  }
+  return []
+}
+
 /** Navrhne `count` tém pre vek — BEZ uloženia (na schválenie adminom). Vracia návrhy. */
 export async function proposeTopicsForAge(ageId: AgeId, count = 10): Promise<TopicProposal[]> {
   const age = AGE_CATEGORIES.find(a => a.id === ageId)
@@ -81,15 +96,15 @@ Každá téma musí mať:
 - keywords: 3–5 kľúčových slov / hodnôt (čiarkou oddelené)
 - moral_lesson: ponaučenie s hĺbkou (jedna veta, nie klišé)
 
-Odpovedz VÝHRADNE ako JSON pole (bez markdown):
-[{"theme":"...","keywords":"...","moral_lesson":"..."}]`
+Odpovedz VÝHRADNE ako JSON objekt (bez markdown):
+{"topics": [{"theme":"...","keywords":"...","moral_lesson":"..."}]}`
     }],
     response_format: { type: 'json_object' },
     temperature: 1,
   })
 
   const raw = JSON.parse(res.choices[0].message.content!)
-  const items: Array<Record<string, string>> = Array.isArray(raw) ? raw : raw.topics ?? raw.items ?? raw.themes ?? []
+  const items = extractItems(raw)
   if (!items.length) throw new Error('AI nevrátila žiadne témy.')
 
   return items.map((t) => ({ theme: t.theme ?? '', keywords: t.keywords ?? '', moral_lesson: t.moral_lesson ?? '' }))
