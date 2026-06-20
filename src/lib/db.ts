@@ -107,7 +107,7 @@ function seed(d: Database.Database) {
     ai_provider: 'openai', email_provider: 'smtp',
     generate_time: '08:00', send_time: '17:00',
     auto_approve: 'off', double_optin: 'off',
-    openai_model: 'gpt-4o-mini', claude_model: 'claude-sonnet-4-6',
+    openai_model: 'gpt-4o-mini',
     groq_model: 'llama-3.3-70b-versatile', grok_model: 'grok-3-mini',
     learning_directives: '',
   }

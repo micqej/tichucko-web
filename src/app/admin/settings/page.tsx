@@ -5,9 +5,8 @@ const SECTIONS = [
   {
     title: '🤖 AI Generátor',
     fields: [
-      { key: 'ai_provider', label: 'Aktívny AI provider', type: 'select', options: ['openai', 'claude', 'groq', 'grok'] },
+      { key: 'ai_provider', label: 'Aktívny AI provider', type: 'select', options: ['openai', 'groq', 'grok'] },
       { key: 'openai_api_key', label: 'OpenAI API kľúč', type: 'password', placeholder: 'sk-proj-...' },
-      { key: 'claude_api_key', label: 'Claude (Anthropic) API kľúč', type: 'password', placeholder: 'sk-ant-...' },
       { key: 'groq_api_key', label: 'Groq API kľúč (groq.com)', type: 'password', placeholder: 'gsk_...' },
       { key: 'grok_api_key', label: 'Grok API kľúč (x.ai)', type: 'password', placeholder: 'xai-...' },
     ],
@@ -17,8 +16,6 @@ const SECTIONS = [
     fields: [
       { key: 'openai_model', label: 'OpenAI model', type: 'combo', placeholder: 'gpt-4o-mini',
         options: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1', 'gpt-4.1-mini'] },
-      { key: 'claude_model', label: 'Claude model', type: 'combo', placeholder: 'claude-sonnet-4-6',
-        options: ['claude-sonnet-4-6', 'claude-opus-4-8', 'claude-haiku-4-5-20251001'] },
       { key: 'groq_model', label: 'Groq model', type: 'combo', placeholder: 'llama-3.3-70b-versatile',
         options: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'openai/gpt-oss-120b'] },
       { key: 'grok_model', label: 'Grok model', type: 'combo', placeholder: 'grok-3-mini',

@@ -29,7 +29,7 @@ export interface Story {
   minutes: number
   pages: StoryPage[]
   author?: string
-  generated_by?: 'openai' | 'groq' | 'claude' | 'manual'
+  generated_by?: 'openai' | 'groq' | 'grok' | 'manual'
   status: 'draft' | 'published'
   published_at: string
   created_at: string

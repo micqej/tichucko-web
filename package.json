@@ -9,7 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.99.0",
     "@types/nodemailer": "^8.0.0",
     "better-sqlite3": "^12.11.1",
     "jose": "^6.2.3",

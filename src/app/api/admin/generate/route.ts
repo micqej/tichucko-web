@@ -1,7 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { generateStoryOpenAI } from '@/lib/openai'
 import { generateStoryGroq } from '@/lib/groq'
-import { generateStoryClaude } from '@/lib/claude'
+import { generateStoryGrok } from '@/lib/grok'
 import { getApiKey, getSetting } from '@/lib/settings'
 import type { NextRequest } from 'next/server'
 import type { AgeId } from '@/lib/types'
@@ -27,14 +27,11 @@ export async function POST(req: NextRequest) {
   try {
     let story
     if (provider === 'groq') {
-      const apiKey = await getApiKey('groq_api_key', 'GROQ_API_KEY')
-      story = await generateStoryGroq(input, apiKey)
-    } else if (provider === 'claude') {
-      const apiKey = await getApiKey('claude_api_key', 'CLAUDE_API_KEY')
-      story = await generateStoryClaude(input, apiKey)
+      story = await generateStoryGroq(input, await getApiKey('groq_api_key', 'GROQ_API_KEY'))
+    } else if (provider === 'grok') {
+      story = await generateStoryGrok(input, await getApiKey('grok_api_key', 'GROK_API_KEY'))
     } else {
-      const apiKey = await getApiKey('openai_api_key', 'OPENAI_API_KEY')
-      story = await generateStoryOpenAI(input, apiKey)
+      story = await generateStoryOpenAI(input, await getApiKey('openai_api_key', 'OPENAI_API_KEY'))
     }
 
     if (topicId) {

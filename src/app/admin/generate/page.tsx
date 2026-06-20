@@ -31,7 +31,7 @@ export default async function GeneratePage({
         unusedTopics={topicsRes.data ?? []}
         preselectedTopic={topicRes.data}
         preselectedTopicIds={bulkIds.length > 0 ? bulkIds : undefined}
-        defaultProvider={(defaultProvider as 'openai' | 'claude' | 'groq') ?? 'openai'}
+        defaultProvider={(defaultProvider as 'openai' | 'groq' | 'grok') ?? 'openai'}
       />
     </div>
   )

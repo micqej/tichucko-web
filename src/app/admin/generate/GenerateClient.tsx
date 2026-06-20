@@ -12,7 +12,7 @@ interface Props {
   defaultProvider?: Provider
 }
 
-type Provider = 'openai' | 'claude' | 'groq'
+type Provider = 'openai' | 'groq' | 'grok'
 type SingleStatus = 'idle' | 'generating' | 'preview' | 'publishing' | 'done' | 'error'
 
 interface BulkItem {
@@ -24,8 +24,8 @@ interface BulkItem {
 
 const PROVIDERS: [Provider, string][] = [
   ['openai', '🤖 OpenAI'],
-  ['claude', '🟠 Claude'],
   ['groq',   '⚡ Groq'],
+  ['grok',   '🛰️ Grok'],
 ]
 
 const LENGTH_OPTIONS: [StoryLength, string, string][] = [

@@ -3,7 +3,7 @@ import { encrypt, decrypt } from './crypto'
 
 // Citlivé kľúče sa v DB ukladajú šifrovane (AES-256-GCM). Pri čítaní sa dešifrujú.
 export const SECRET_KEYS = new Set([
-  'openai_api_key', 'claude_api_key', 'groq_api_key', 'grok_api_key', 'resend_api_key', 'smtp_password',
+  'openai_api_key', 'groq_api_key', 'grok_api_key', 'resend_api_key', 'smtp_password',
 ])
 
 // 60-sekundová in-memory cache (dešifrované hodnoty)

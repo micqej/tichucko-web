@@ -2,7 +2,6 @@ import { supabaseAdmin } from './supabase'
 import { generateStoryOpenAI, type GenerateInput, type GeneratedStory } from './openai'
 import { generateStoryGrok } from './grok'
 import { generateStoryGroq } from './groq'
-import { generateStoryClaude } from './claude'
 import { getApiKey, getSetting } from './settings'
 import { generateTopicsForAge } from './topics'
 import type { AgeId } from './types'
@@ -19,7 +18,6 @@ export async function generateWithCascade(input: GenerateInput, preferred: strin
   try {
     if (preferred === 'grok') return { story: await generateStoryGrok(input, await getApiKey('grok_api_key', 'GROK_API_KEY')), provider: 'grok' }
     if (preferred === 'groq') return { story: await generateStoryGroq(input, await getApiKey('groq_api_key', 'GROQ_API_KEY')), provider: 'groq' }
-    if (preferred === 'claude') return { story: await generateStoryClaude(input, await getApiKey('claude_api_key', 'CLAUDE_API_KEY')), provider: 'claude' }
     return { story: await generateStoryOpenAI(input, await getApiKey('openai_api_key', 'OPENAI_API_KEY')), provider: 'openai' }
   } catch (primaryErr) {
     if (preferred === 'openai') throw primaryErr
