@@ -2,6 +2,7 @@ import OpenAI from 'openai'
 import type { AgeId, StoryPage } from './types'
 import { AGE_CATEGORIES } from './data'
 import { getSetting } from './settings'
+import { seasonalContext } from './seasonal'
 
 function getClient(apiKey?: string) {
   return new OpenAI({ apiKey: apiKey || process.env.OPENAI_API_KEY })
@@ -32,6 +33,17 @@ export function directiveBlock(input: GenerateInput): string {
     : ''
 }
 
+/** Pokyny na hĺbku príbehu + sezónny kontext — vkladá sa do každého generovania rozprávky. */
+export function depthBlock(): string {
+  return `\nKĽÚČOVÉ PRE KVALITU — rozprávka musí mať skutočnú HĹBKU:
+- Emocionálna vrstva a vnútorný svet postavy: jemný vnútorný konflikt a premena zvnútra, nie plochý dej.
+- Ukazuj cez obraz, dej a dialóg — nepoučuj. Ponaučenie nech vyplynie prirodzene zo zážitku, nie ako nálepka.
+- Konkrétne zmyslové detaily (vône, zvuky, svetlo, dotyk), poetický no jednoduchý jazyk primeraný veku.
+- Žiadne klišé ani moralizovanie. Tón teplý, láskavý, upokojujúci pred spaním; nikdy strašidelný.
+- Postavy s menom a charakterom, ktorým dieťa rozumie a fandí.
+Sezónny kontext (${seasonalContext()}): ak to prirodzene sedí k téme, jemne ho votkaj do prostredia a atmosféry (nie nasilu).\n`
+}
+
 export interface GeneratedStory {
   title: string
   emoji: string
@@ -53,7 +65,7 @@ const COVER_PALETTES: Record<AgeId, { a: string; b: string }> = {
 function buildPrompt(input: GenerateInput): string {
   const age = AGE_CATEGORIES.find(a => a.id === input.ageId)!
   const spec = LENGTH_SPECS[input.length ?? 'medium']
-  return `${directiveBlock(input)}Napíš originálnu slovenskú rozprávku na dobrú noc pre deti vo veku ${age.range}.
+  return `${directiveBlock(input)}${depthBlock()}Napíš originálnu slovenskú rozprávku na dobrú noc pre deti vo veku ${age.range}.
 
 Téma: ${input.theme}
 ${input.keywords ? `Kľúčové slová: ${input.keywords}` : ''}

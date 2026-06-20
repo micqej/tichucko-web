@@ -2,7 +2,7 @@
 import OpenAI from 'openai'
 import type { AgeId } from './types'
 import type { GenerateInput, GeneratedStory } from './openai'
-import { directiveBlock } from './openai'
+import { directiveBlock, depthBlock } from './openai'
 import { AGE_CATEGORIES } from './data'
 import { getSetting } from './settings'
 
@@ -20,7 +20,7 @@ const COVER_PALETTES: Record<AgeId, { a: string; b: string }> = {
 
 function buildPrompt(input: GenerateInput): string {
   const age = AGE_CATEGORIES.find(a => a.id === input.ageId)!
-  return `${directiveBlock(input)}Napíš originálnu slovenskú rozprávku na dobrú noc pre deti vo veku ${age.range}.
+  return `${directiveBlock(input)}${depthBlock()}Napíš originálnu slovenskú rozprávku na dobrú noc pre deti vo veku ${age.range}.
 
 Téma: ${input.theme}
 ${input.keywords ? `Kľúčové slová: ${input.keywords}` : ''}
