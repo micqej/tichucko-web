@@ -8,6 +8,8 @@ export interface AgeCategory {
   color: string
   blurb: string
   values: string[]
+  /** Námety článkov pre rodičov — používajú sa aj v admine ako podklad na generovanie. */
+  articleIdeas?: string[]
 }
 
 export interface StoryPage {

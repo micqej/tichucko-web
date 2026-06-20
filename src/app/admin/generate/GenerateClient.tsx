@@ -72,6 +72,21 @@ export default function GenerateClient({ ages, unusedTopics, preselectedTopic, p
   const labelStyle: React.CSSProperties = {
     display: 'block', fontSize: 12, fontWeight: 700, color: '#7a7faa', marginBottom: 7,
   }
+  const chipStyle = (color: string): React.CSSProperties => ({
+    fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 999, cursor: 'pointer',
+    background: color + '1f', color, border: `1px solid ${color}44`, fontFamily: 'inherit', lineHeight: 1.3,
+  })
+
+  // Aktuálne vybraný vek + jeho hodnoty/námety (na miešanie do generovania)
+  const selectedAge = ages.find(a => a.id === ageId)
+
+  function addKeyword(v: string) {
+    setKeywords(prev => {
+      const parts = prev.split(',').map(s => s.trim()).filter(Boolean)
+      if (parts.includes(v)) return prev
+      return [...parts, v].join(', ')
+    })
+  }
 
   // ── Single: pick topic from dropdown ──────────────────────────
   function pickTopic(id: string) {
@@ -275,6 +290,32 @@ export default function GenerateClient({ ages, unusedTopics, preselectedTopic, p
                 ))}
               </div>
             </div>
+
+            {/* Miešanie hodnôt + námetov daného veku do generovania */}
+            {selectedAge && (
+              <div style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 10, background: 'rgba(255,255,255,.04)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#7a7faa', marginBottom: 8 }}>
+                  Hodnoty <span style={{ fontWeight: 500 }}>· klik = pridať do kľúčových slov</span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {selectedAge.values.map(v => (
+                    <button key={v} type="button" onClick={() => addKeyword(v)} style={chipStyle(selectedAge.color)}>{v}</button>
+                  ))}
+                </div>
+                {selectedAge.articleIdeas && selectedAge.articleIdeas.length > 0 && (
+                  <>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#7a7faa', margin: '12px 0 8px' }}>
+                      Námety <span style={{ fontWeight: 500 }}>· klik = nastaviť ako tému</span>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {selectedAge.articleIdeas.map(idea => (
+                        <button key={idea} type="button" onClick={() => setTheme(idea)} style={chipStyle('#ffd47a')}>{idea}</button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             <div style={{ marginBottom: 14 }}>
               <label style={labelStyle}>Téma *</label>

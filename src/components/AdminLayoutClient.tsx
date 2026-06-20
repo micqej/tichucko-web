@@ -7,6 +7,7 @@ const NAV = [
   { href: '/admin/stories',     label: '📖 Rozprávky',     exact: false },
   { href: '/admin/topics',      label: '🗂️ Témy',          exact: false },
   { href: '/admin/generate',    label: '✨ Generovať AI',  exact: false },
+  { href: '/admin/calendar',    label: '🗓️ Kalendár',      exact: false },
   { href: '/admin/subscribers', label: '📬 Odberatelia',   exact: false },
   { href: '/admin/settings',    label: '⚙️ Nastavenia',    exact: false },
 ]
