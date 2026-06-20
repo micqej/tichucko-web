@@ -13,12 +13,16 @@ const SECTIONS = [
     ],
   },
   {
-    title: '🧠 Modely (editovateľné)',
+    title: '🧠 Modely (vyber zo zoznamu alebo napíš vlastný)',
     fields: [
-      { key: 'openai_model', label: 'OpenAI model', type: 'text', placeholder: 'gpt-4o-mini' },
-      { key: 'claude_model', label: 'Claude model', type: 'text', placeholder: 'claude-sonnet-4-6' },
-      { key: 'groq_model', label: 'Groq model', type: 'text', placeholder: 'llama-3.3-70b-versatile' },
-      { key: 'grok_model', label: 'Grok model', type: 'text', placeholder: 'grok-3-mini' },
+      { key: 'openai_model', label: 'OpenAI model', type: 'combo', placeholder: 'gpt-4o-mini',
+        options: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1', 'gpt-4.1-mini'] },
+      { key: 'claude_model', label: 'Claude model', type: 'combo', placeholder: 'claude-sonnet-4-6',
+        options: ['claude-sonnet-4-6', 'claude-opus-4-8', 'claude-haiku-4-5-20251001'] },
+      { key: 'groq_model', label: 'Groq model', type: 'combo', placeholder: 'llama-3.3-70b-versatile',
+        options: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'openai/gpt-oss-120b'] },
+      { key: 'grok_model', label: 'Grok model', type: 'combo', placeholder: 'grok-3-mini',
+        options: ['grok-3-mini', 'grok-3', 'grok-4'] },
     ],
   },
   {
@@ -112,6 +116,19 @@ export default function SettingsPage() {
                       <option key={opt} value={opt} style={{ background: '#1a1f48' }}>{opt}</option>
                     ))}
                   </select>
+                ) : field.type === 'combo' ? (
+                  <>
+                    <input
+                      list={`dl-${field.key}`}
+                      value={values[field.key] ?? ''}
+                      placeholder={field.placeholder}
+                      onChange={e => setValues(v => ({ ...v, [field.key]: e.target.value }))}
+                      style={inputStyle}
+                    />
+                    <datalist id={`dl-${field.key}`}>
+                      {(field.options ?? []).map(opt => <option key={opt} value={opt} />)}
+                    </datalist>
+                  </>
                 ) : field.type === 'textarea' ? (
                   <textarea
                     value={values[field.key] ?? ''}
@@ -148,11 +165,55 @@ export default function SettingsPage() {
         </div>
       ))}
 
+      <TestEmailSection />
+
       <PasswordSection />
 
       <div style={{ background: 'rgba(255,212,122,.08)', border: '1px solid rgba(255,212,122,.2)', borderRadius: 12, padding: '14px 18px', color: '#ffd47a', fontSize: 13 }}>
         💡 API kľúče sú šifrované v databáze a maskované pri zobrazení. Po uložení sa nové hodnoty hneď použijú — bez reštartu.
       </div>
+    </div>
+  )
+}
+
+function TestEmailSection() {
+  const [busy, setBusy] = useState<string | null>(null)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  async function test(provider: 'smtp' | 'resend') {
+    setBusy(provider); setMsg(null)
+    try {
+      const res = await fetch('/api/admin/test-email', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider }),
+      })
+      const d = await res.json().catch(() => ({}))
+      setMsg(res.ok
+        ? { ok: true, text: `✓ Test cez ${provider.toUpperCase()} odoslaný na ${d.to}. Skontroluj schránku.` }
+        : { ok: false, text: `${provider.toUpperCase()}: ${d.error || 'zlyhalo'}` })
+    } catch {
+      setMsg({ ok: false, text: 'Sieťová chyba.' })
+    }
+    setBusy(null)
+  }
+
+  const btn = (provider: 'smtp' | 'resend', label: string, bg: string): React.CSSProperties => ({
+    padding: '11px 20px', borderRadius: 10, border: 'none', cursor: busy ? 'wait' : 'pointer',
+    fontWeight: 800, fontSize: 14, fontFamily: 'inherit', background: bg, color: '#1f2247',
+    opacity: busy && busy !== provider ? 0.5 : 1, marginRight: 12,
+  })
+
+  return (
+    <div style={{ background: '#1a1f48', borderRadius: 16, padding: 28, border: '1px solid rgba(255,255,255,.07)', marginBottom: 24 }}>
+      <h2 style={{ fontFamily: 'var(--font-fraunces)', fontSize: 18, fontWeight: 900, marginBottom: 8, color: '#f6f1e1' }}>📨 Test odoslania</h2>
+      <p style={{ color: '#7a7faa', fontSize: 13, marginBottom: 18 }}>Pošle testovací e-mail na <strong>tvoju admin adresu</strong> cez daného providera (nezávisle od toho, ktorý je aktívny). Najprv ulož príslušné nastavenia.</p>
+      <button onClick={() => test('smtp')} disabled={!!busy} style={btn('smtp', '🧪 Test SMTP', '#9be59b')}>
+        {busy === 'smtp' ? 'Posielam…' : '🧪 Test SMTP'}
+      </button>
+      <button onClick={() => test('resend')} disabled={!!busy} style={btn('resend', '🧪 Test Resend', '#7cc6ff')}>
+        {busy === 'resend' ? 'Posielam…' : '🧪 Test Resend'}
+      </button>
+      {msg && <p style={{ color: msg.ok ? '#9be59b' : '#ffb3b3', fontSize: 13, marginTop: 16 }}>{msg.text}</p>}
     </div>
   )
 }

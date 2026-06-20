@@ -38,6 +38,30 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 
 interface RawMail { to: string; subject: string; html: string; headers?: Record<string, string> }
 
+/** Pošle testovací email cez KONKRÉTNEHO providera (nezávisle od aktívneho). Vyhodí chybu pri zlyhaní. */
+export async function sendTestEmail(provider: 'smtp' | 'resend', to?: string) {
+  const recipient = to || ADMIN_EMAIL()
+  const subject = `🧪 Test ${provider.toUpperCase()} — Tichučko`
+  const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:28px;color:#1f2247">
+    <h1 style="font-size:22px">🌙 Test odoslania funguje!</h1>
+    <p style="font-size:15px;color:#4a4f7a">Toto je testovací e-mail z Tichučka cez <strong>${provider.toUpperCase()}</strong>.
+    Ak ho čítaš, odosielanie je správne nastavené.</p>
+    <p style="font-size:13px;color:#9a9ab0">Čas: ${new Date().toLocaleString('sk-SK')}</p>
+  </div>`
+
+  if (provider === 'smtp') {
+    const cfg = await getSmtpConfig()
+    if (!cfg.host || !cfg.user) throw new Error('SMTP nie je nastavené (host/používateľ).')
+    await createSmtpTransport(cfg).sendMail({ from: cfg.from, to: recipient, subject, html })
+  } else {
+    const key = await getApiKey('resend_api_key', 'RESEND_API_KEY')
+    if (!key) throw new Error('Resend API kľúč nie je nastavený.')
+    const { error } = await new Resend(key).emails.send({ from: await getFrom(), to: recipient, subject, html })
+    if (error) throw new Error(typeof error === 'string' ? error : (error.message || 'Resend chyba'))
+  }
+  return recipient
+}
+
 /** Send one email via the active provider (SMTP or Resend). */
 export async function rawSend(mail: RawMail) {
   if ((await getProvider()) === 'smtp') {
