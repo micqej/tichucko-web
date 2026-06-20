@@ -75,7 +75,7 @@ export async function proposeTopicsForAge(ageId: AgeId, count = 10): Promise<Top
     model,
     messages: [{
       role: 'user',
-      content: `Si skúsený detský psychológ a rozprávkár. Vygeneruj ${count} originálnych, EMOCIONÁLNE HLBOKÝCH tém pre slovenské rozprávky na dobrú noc pre deti vo veku ${age.range} (${age.label}).${steer}
+      content: `Si skúsený detský psychológ a rozprávkár. Vygeneruj PRESNE ${count} (ani viac, ani menej) originálnych, EMOCIONÁLNE HLBOKÝCH tém pre slovenské rozprávky na dobrú noc pre deti vo veku ${age.range} (${age.label}).${steer}
 
 Charakteristika veku: ${age.blurb}
 
@@ -107,7 +107,8 @@ Odpovedz VÝHRADNE ako JSON objekt (bez markdown):
   const items = extractItems(raw)
   if (!items.length) throw new Error('AI nevrátila žiadne témy.')
 
-  return items.map((t) => ({ theme: t.theme ?? '', keywords: t.keywords ?? '', moral_lesson: t.moral_lesson ?? '' }))
+  // Poistka — model občas vráti viac, než si pýtame: orež presne na count.
+  return items.slice(0, count).map((t) => ({ theme: t.theme ?? '', keywords: t.keywords ?? '', moral_lesson: t.moral_lesson ?? '' }))
 }
 
 /** Uloží návrhy tém pre daný vek do fronty. */
