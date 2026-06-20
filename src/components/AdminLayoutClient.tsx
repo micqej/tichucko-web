@@ -5,8 +5,9 @@ import Link from 'next/link'
 const NAV = [
   { href: '/admin',             label: '📊 Dashboard',     exact: true  },
   { href: '/admin/stories',     label: '📖 Rozprávky',     exact: false },
+  { href: '/admin/navrh',       label: '✨ Auto-návrh tém', exact: false },
   { href: '/admin/topics',      label: '🗂️ Témy',          exact: false },
-  { href: '/admin/generate',    label: '✨ Generovať AI',  exact: false },
+  { href: '/admin/generate',    label: '🪄 Generovať ručne', exact: false },
   { href: '/admin/calendar',    label: '🗓️ Kalendár',      exact: false },
   { href: '/admin/subscribers', label: '📬 Odberatelia',   exact: false },
   { href: '/admin/settings',    label: '⚙️ Nastavenia',    exact: false },

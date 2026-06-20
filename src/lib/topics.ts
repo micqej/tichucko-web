@@ -33,8 +33,10 @@ async function winningThemes(ageId: AgeId): Promise<string[]> {
   }
 }
 
-/** Generate `count` fresh topics for an age group and insert them. Returns inserted rows. */
-export async function generateTopicsForAge(ageId: AgeId, count = 10) {
+export type TopicProposal = { theme: string; keywords: string; moral_lesson: string }
+
+/** Navrhne `count` tém pre vek — BEZ uloženia (na schválenie adminom). Vracia návrhy. */
+export async function proposeTopicsForAge(ageId: AgeId, count = 10): Promise<TopicProposal[]> {
   const age = AGE_CATEGORIES.find(a => a.id === ageId)
   if (!age) throw new Error(`Neplatný vek: ${ageId}`)
 
@@ -90,14 +92,20 @@ Odpovedz VÝHRADNE ako JSON pole (bez markdown):
   const items: Array<Record<string, string>> = Array.isArray(raw) ? raw : raw.topics ?? raw.items ?? raw.themes ?? []
   if (!items.length) throw new Error('AI nevrátila žiadne témy.')
 
-  const rows = items.map((t) => ({
-    age_id: ageId,
-    theme: t.theme ?? '',
-    keywords: t.keywords ?? '',
-    moral_lesson: t.moral_lesson ?? '',
-  }))
+  return items.map((t) => ({ theme: t.theme ?? '', keywords: t.keywords ?? '', moral_lesson: t.moral_lesson ?? '' }))
+}
 
-  const { data, error } = await supabaseAdmin().from('topics').insert(rows).select()
+/** Uloží návrhy tém pre daný vek do fronty. */
+export async function insertTopics(ageId: AgeId, rows: TopicProposal[]) {
+  if (!rows.length) return []
+  const payload = rows.map(r => ({ age_id: ageId, theme: r.theme, keywords: r.keywords, moral_lesson: r.moral_lesson }))
+  const { data, error } = await supabaseAdmin().from('topics').insert(payload).select()
   if (error) throw new Error(`Uloženie tém zlyhalo: ${error.message}`)
   return data
+}
+
+/** Navrhne a rovno uloží témy (používa cron auto-refill, keď dochádzajú témy). */
+export async function generateTopicsForAge(ageId: AgeId, count = 10) {
+  const proposals = await proposeTopicsForAge(ageId, count)
+  return insertTopics(ageId, proposals)
 }
