@@ -3,6 +3,7 @@ import { getDb } from './db'
 import { supabaseAdmin } from './supabase'
 import { AGE_CATEGORIES } from './data'
 import { getApiKey, getSetting } from './settings'
+import { seasonalContext } from './seasonal'
 import type { AgeId } from './types'
 
 async function getTopicClient() {
@@ -48,21 +49,41 @@ export async function generateTopicsForAge(ageId: AgeId, count = 10) {
     ? `\n\nTieto témy mali u rodičov úspech — inšpiruj sa ich náladou (vymysli NOVÉ, neopakuj doslova), ale len ak neodporujú pokynom redaktora:\n- ${winners.join('\n- ')}`
     : ''
 
+  const dateStr = new Date().toLocaleDateString('sk-SK', { day: 'numeric', month: 'long', year: 'numeric' })
+  const seasonal = seasonalContext()
+  const valuesPalette = age.values.map(v => `- ${v}`).join('\n')
+  const ideas = (age.articleIdeas ?? []).map(v => `- ${v}`).join('\n')
+
   const res = await client.chat.completions.create({
     model,
     messages: [{
       role: 'user',
-      content: `Vygeneruj ${count} originálnych tém pre slovenské rozprávky na dobrú noc pre deti vo veku ${age.range}.${steer}${inspiration}
+      content: `Si skúsený detský psychológ a rozprávkár. Vygeneruj ${count} originálnych, EMOCIONÁLNE HLBOKÝCH tém pre slovenské rozprávky na dobrú noc pre deti vo veku ${age.range} (${age.label}).${steer}
+
+Charakteristika veku: ${age.blurb}
+
+Vychádzaj z hodnôt dôležitých pre tento vek (kombinuj ich a prepájaj, nech majú témy vrstvu):
+${valuesPalette}
+${ideas ? `\nMôžeš sa inšpirovať aj týmito rodičovskými námetmi:\n${ideas}` : ''}
+
+KALENDÁR (dnes je ${dateStr}) — ${seasonal}.
+Pri časti tém (nie pri všetkých a nikdy nasilu) jemne zapleť tento sezónny/sviatočný motív, nech to má súvis s obdobím.${inspiration}
+
+Požiadavky na HĹBKU (toto je najdôležitejšie):
+- Žiadne ploché námety typu „zdieľanie hračiek". Každá téma nech nesie vnútorný konflikt alebo jemnú emóciu dieťaťa (napr. „keď je najťažšie požičať to najmilšie").
+- Prepájaj hodnoty navzájom, aby mala téma presah a hĺbku.
+- Láskavé, upokojujúce, vhodné pred spaním — nikdy strašidelné ani moralizujúce.
 
 Každá téma musí mať:
-- theme: krátka téma/námet (max 5 slov, nie popisný názov)
-- keywords: 3–5 kľúčových slov (čiarkou oddelené)
-- moral_lesson: ponaučenie (jedna krátka veta)
+- theme: pútavý konkrétny názov (max ~6 slov)
+- keywords: 3–5 kľúčových slov / hodnôt (čiarkou oddelené)
+- moral_lesson: ponaučenie s hĺbkou (jedna veta, nie klišé)
 
 Odpovedz VÝHRADNE ako JSON pole (bez markdown):
 [{"theme":"...","keywords":"...","moral_lesson":"..."}]`
     }],
     response_format: { type: 'json_object' },
+    temperature: 1,
   })
 
   const raw = JSON.parse(res.choices[0].message.content!)
