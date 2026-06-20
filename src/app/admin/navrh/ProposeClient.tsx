@@ -12,6 +12,9 @@ export default function ProposeClient({ ages, autoApprove }: { ages: AgeCategory
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [savedMsg, setSavedMsg] = useState('')
+  // 3. krok — generovanie z čerstvo schválených tém
+  const [savedTopics, setSavedTopics] = useState<Array<{ id: string; age_id: AgeId; theme: string; keywords: string; moral_lesson: string }>>([])
+  const [gen, setGen] = useState<{ done: number; total: number; running: boolean; finished: boolean }>({ done: 0, total: 0, running: false, finished: false })
 
   const ageOf = (id: string) => ages.find(a => a.id === id)
   function toggleAge(id: AgeId) {
@@ -48,10 +51,38 @@ export default function ProposeClient({ ages, autoApprove }: { ages: AgeCategory
       })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || 'Uloženie zlyhalo')
-      setSavedMsg(`✓ Schválených ${d.count} tém — pridané do fronty. Rozprávky sa z nich vyrobia automaticky podľa kalendára.`)
+      setSavedMsg(`✓ Schválených ${d.count} tém — pridané do fronty.`)
+      setSavedTopics(d.topics ?? [])
+      setGen({ done: 0, total: 0, running: false, finished: false })
       setProposals([])
     } catch (e) { setError(e instanceof Error ? e.message : 'Chyba') }
     setSaving(false)
+  }
+
+  // 3. krok: vyrobí rozprávky zo schválených tém (ako koncepty na finálne schválenie)
+  async function generateNow() {
+    if (savedTopics.length === 0) return
+    setError('')
+    setGen({ done: 0, total: savedTopics.length, running: true, finished: false })
+    let done = 0
+    for (const t of savedTopics) {
+      try {
+        const g = await fetch('/api/admin/generate', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ageId: t.age_id, theme: t.theme, keywords: t.keywords, moralLesson: t.moral_lesson, length: 'medium', topicId: t.id }),
+        })
+        const gd = await g.json()
+        if (g.ok) {
+          await fetch('/api/admin/stories', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...gd.story, status: 'pending_review' }),
+          })
+        }
+      } catch { /* pokračuj ďalej */ }
+      done++
+      setGen({ done, total: savedTopics.length, running: true, finished: false })
+    }
+    setGen({ done, total: savedTopics.length, running: false, finished: true })
   }
 
   const card: React.CSSProperties = { background: '#1a1f48', borderRadius: 16, padding: 24, border: '1px solid rgba(255,255,255,.07)' }
@@ -119,6 +150,31 @@ export default function ProposeClient({ ages, autoApprove }: { ages: AgeCategory
               )
             })}
           </div>
+        </div>
+      )}
+
+      {/* 3. krok — generovať teraz zo schválených tém */}
+      {savedTopics.length > 0 && (
+        <div style={{ ...card, borderColor: 'rgba(155,229,155,.25)' }}>
+          <h2 style={{ fontFamily: 'var(--font-fraunces)', fontSize: 18, fontWeight: 900, marginBottom: 6 }}>3. Vygenerovať rozprávky</h2>
+          <p style={{ color: '#7a7faa', fontSize: 13, marginBottom: 16 }}>
+            {gen.finished
+              ? <>Hotovo — <strong style={{ color: '#9be59b' }}>{gen.done}</strong> rozprávok je pripravených na finálne schválenie.</>
+              : gen.running
+                ? <>Generujem… <strong>{gen.done}/{gen.total}</strong> (každá ~10–20 s, vydrž)</>
+                : <>Máš <strong>{savedTopics.length}</strong> schválených tém vo fronte. Vygeneruj z nich rozprávky hneď teraz, alebo to nechaj na ranný worker.</>}
+          </p>
+          {gen.finished ? (
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <a href="/admin/calendar" style={{ padding: '11px 20px', borderRadius: 10, background: '#c89bff', color: '#1f2247', fontWeight: 800, fontSize: 14, textDecoration: 'none' }}>🗓️ Pozri v kalendári</a>
+              <a href="/admin" style={{ padding: '11px 20px', borderRadius: 10, background: 'rgba(255,255,255,.08)', color: '#f6f1e1', fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>✅ Schváliť na Dashboarde</a>
+            </div>
+          ) : (
+            <button onClick={generateNow} disabled={gen.running} style={{
+              padding: '12px 22px', borderRadius: 10, border: 'none', cursor: gen.running ? 'wait' : 'pointer',
+              background: '#9be59b', color: '#1f2247', fontWeight: 800, fontSize: 14, fontFamily: 'inherit',
+            }}>{gen.running ? `⏳ ${gen.done}/${gen.total}…` : `🪄 Vygenerovať ${savedTopics.length} rozprávok teraz`}</button>
+          )}
         </div>
       )}
 
