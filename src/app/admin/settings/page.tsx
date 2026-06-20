@@ -5,10 +5,35 @@ const SECTIONS = [
   {
     title: '🤖 AI Generátor',
     fields: [
-      { key: 'ai_provider', label: 'Aktívny AI provider', type: 'select', options: ['openai', 'claude', 'groq'] },
+      { key: 'ai_provider', label: 'Aktívny AI provider', type: 'select', options: ['openai', 'claude', 'groq', 'grok'] },
       { key: 'openai_api_key', label: 'OpenAI API kľúč', type: 'password', placeholder: 'sk-proj-...' },
       { key: 'claude_api_key', label: 'Claude (Anthropic) API kľúč', type: 'password', placeholder: 'sk-ant-...' },
       { key: 'groq_api_key', label: 'Groq API kľúč (groq.com)', type: 'password', placeholder: 'gsk_...' },
+      { key: 'grok_api_key', label: 'Grok API kľúč (x.ai)', type: 'password', placeholder: 'xai-...' },
+    ],
+  },
+  {
+    title: '🧠 Modely (editovateľné)',
+    fields: [
+      { key: 'openai_model', label: 'OpenAI model', type: 'text', placeholder: 'gpt-4o-mini' },
+      { key: 'claude_model', label: 'Claude model', type: 'text', placeholder: 'claude-sonnet-4-6' },
+      { key: 'groq_model', label: 'Groq model', type: 'text', placeholder: 'llama-3.3-70b-versatile' },
+      { key: 'grok_model', label: 'Grok model', type: 'text', placeholder: 'grok-3-mini' },
+    ],
+  },
+  {
+    title: '⚙️ Automatizácia a časy',
+    fields: [
+      { key: 'auto_approve', label: 'Auto-schvaľovanie (bez teba) — on/off', type: 'select', options: ['off', 'on'] },
+      { key: 'double_optin', label: 'Double opt-in (potvrdenie emailom) — on/off', type: 'select', options: ['off', 'on'] },
+      { key: 'generate_time', label: 'Čas generovania (SK, HH:MM)', type: 'text', placeholder: '08:00' },
+      { key: 'send_time', label: 'Čas odoslania newslettera (SK, HH:MM)', type: 'text', placeholder: '17:00' },
+    ],
+  },
+  {
+    title: '🧭 Učenie a smerovanie (tvoje slovo má prednosť)',
+    fields: [
+      { key: 'learning_directives', label: 'Pokyny pre AI — majú PREDNOSŤ pred hlasmi ľudí (štýl, témy, čomu sa vyhnúť)', type: 'textarea', placeholder: 'Napr.: Píš vždy láskavo, vyhýbaj sa strašidelným motívom, preferuj zvieracie postavy a krátke vety…' },
     ],
   },
   {
@@ -87,6 +112,14 @@ export default function SettingsPage() {
                       <option key={opt} value={opt} style={{ background: '#1a1f48' }}>{opt}</option>
                     ))}
                   </select>
+                ) : field.type === 'textarea' ? (
+                  <textarea
+                    value={values[field.key] ?? ''}
+                    placeholder={field.placeholder}
+                    rows={5}
+                    onChange={e => setValues(v => ({ ...v, [field.key]: e.target.value }))}
+                    style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
+                  />
                 ) : (
                   <input
                     type={field.type === 'password' ? 'password' : 'text'}
@@ -115,9 +148,51 @@ export default function SettingsPage() {
         </div>
       ))}
 
+      <PasswordSection />
+
       <div style={{ background: 'rgba(255,212,122,.08)', border: '1px solid rgba(255,212,122,.2)', borderRadius: 12, padding: '14px 18px', color: '#ffd47a', fontSize: 13 }}>
-        💡 API kľúče sú maskované pri zobrazení. Po uložení sa nový kľúč hneď použije — bez redeploymentu.
+        💡 API kľúče sú šifrované v databáze a maskované pri zobrazení. Po uložení sa nové hodnoty hneď použijú — bez reštartu.
       </div>
+    </div>
+  )
+}
+
+function PasswordSection() {
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '10px 14px', borderRadius: 10, marginBottom: 12,
+    background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.12)',
+    color: '#fff', fontSize: 14, fontFamily: 'inherit', outline: 'none',
+  }
+
+  async function change() {
+    setBusy(true); setMsg(null)
+    const res = await fetch('/api/admin/password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current, next }),
+    })
+    const d = await res.json().catch(() => ({}))
+    setBusy(false)
+    if (res.ok) { setMsg({ ok: true, text: 'Heslo zmenené. ✓' }); setCurrent(''); setNext('') }
+    else setMsg({ ok: false, text: d.error || 'Zmena zlyhala.' })
+  }
+
+  return (
+    <div style={{ background: '#1a1f48', borderRadius: 16, padding: 28, border: '1px solid rgba(255,255,255,.07)', marginBottom: 24 }}>
+      <h2 style={{ fontFamily: 'var(--font-fraunces)', fontSize: 18, fontWeight: 900, marginBottom: 22, color: '#f6f1e1' }}>🔐 Zmena hesla</h2>
+      <input type="password" placeholder="Súčasné heslo" value={current} onChange={e => setCurrent(e.target.value)} style={inputStyle} />
+      <input type="password" placeholder="Nové heslo (min. 8 znakov)" value={next} onChange={e => setNext(e.target.value)} style={inputStyle} />
+      {msg && <p style={{ color: msg.ok ? '#9be59b' : '#ffb3b3', fontSize: 13, marginBottom: 12 }}>{msg.text}</p>}
+      <button onClick={change} disabled={busy || !current || next.length < 8} style={{
+        padding: '11px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
+        fontWeight: 800, fontSize: 14, fontFamily: 'inherit',
+        background: busy ? 'rgba(255,255,255,.1)' : '#ffd47a', color: '#1f2247',
+        opacity: (!current || next.length < 8) ? 0.5 : 1,
+      }}>{busy ? 'Mením…' : 'Zmeniť heslo'}</button>
     </div>
   )
 }

@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { AGE_CATEGORIES } from '@/lib/data'
+
+export const dynamic = 'force-dynamic'
 import type { Story } from '@/lib/types'
 import Nav from '@/components/Nav'
 import Stars from '@/components/Stars'

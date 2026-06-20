@@ -1,6 +1,8 @@
 import { supabase } from '@/lib/supabase'
 import type { Story } from '@/lib/types'
 import Nav from '@/components/Nav'
+
+export const dynamic = 'force-dynamic'
 import Stars from '@/components/Stars'
 import StoriesSection from '@/components/StoriesSection'
 

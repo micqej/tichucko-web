@@ -2,7 +2,9 @@
 import OpenAI from 'openai'
 import type { AgeId } from './types'
 import type { GenerateInput, GeneratedStory } from './openai'
+import { directiveBlock } from './openai'
 import { AGE_CATEGORIES } from './data'
+import { getSetting } from './settings'
 
 function getGrok(apiKey?: string) {
   return new OpenAI({ apiKey: apiKey || process.env.GROK_API_KEY, baseURL: 'https://api.x.ai/v1' })
@@ -18,7 +20,7 @@ const COVER_PALETTES: Record<AgeId, { a: string; b: string }> = {
 
 function buildPrompt(input: GenerateInput): string {
   const age = AGE_CATEGORIES.find(a => a.id === input.ageId)!
-  return `Napíš originálnu slovenskú rozprávku na dobrú noc pre deti vo veku ${age.range}.
+  return `${directiveBlock(input)}Napíš originálnu slovenskú rozprávku na dobrú noc pre deti vo veku ${age.range}.
 
 Téma: ${input.theme}
 ${input.keywords ? `Kľúčové slová: ${input.keywords}` : ''}
@@ -47,7 +49,7 @@ Odpovedz VÝHRADNE vo formáte JSON (bez markdown kódu):
 
 export async function generateStoryGrok(input: GenerateInput, apiKey?: string): Promise<GeneratedStory> {
   const res = await getGrok(apiKey).chat.completions.create({
-    model: 'grok-3-mini',
+    model: (await getSetting('grok_model')) || 'grok-3-mini',
     messages: [{ role: 'user', content: buildPrompt(input) }],
     temperature: 0.9,
   })

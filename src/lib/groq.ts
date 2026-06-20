@@ -2,7 +2,9 @@
 import OpenAI from 'openai'
 import type { AgeId } from './types'
 import type { GenerateInput, GeneratedStory } from './openai'
+import { directiveBlock } from './openai'
 import { AGE_CATEGORIES } from './data'
+import { getSetting } from './settings'
 
 function getGroq(apiKey?: string) {
   return new OpenAI({
@@ -28,7 +30,7 @@ const LENGTH_SPECS = {
 function buildPrompt(input: GenerateInput): string {
   const age = AGE_CATEGORIES.find(a => a.id === input.ageId)!
   const spec = LENGTH_SPECS[input.length ?? 'medium']
-  return `Napíš originálnu slovenskú rozprávku na dobrú noc pre deti vo veku ${age.range}.
+  return `${directiveBlock(input)}Napíš originálnu slovenskú rozprávku na dobrú noc pre deti vo veku ${age.range}.
 
 Téma: ${input.theme}
 ${input.keywords ? `Kľúčové slová: ${input.keywords}` : ''}
@@ -58,7 +60,7 @@ Odpovedz VÝHRADNE vo formáte JSON (bez markdown):
 
 export async function generateStoryGroq(input: GenerateInput, apiKey?: string): Promise<GeneratedStory> {
   const res = await getGroq(apiKey).chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
+    model: (await getSetting('groq_model')) || 'llama-3.3-70b-versatile',
     messages: [{ role: 'user', content: buildPrompt(input) }],
     temperature: 0.9,
   })

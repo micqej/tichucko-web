@@ -1,116 +1,72 @@
 import { supabaseAdmin } from '@/lib/supabase'
-import { generateStoryOpenAI } from '@/lib/openai'
-import { generateStoryGrok } from '@/lib/grok'
-import { generateStoryClaude } from '@/lib/claude'
-import { sendDailyStory } from '@/lib/email'
-import { getSetting, getApiKey } from '@/lib/settings'
+import { sendDailyStory, sendDailyReport } from '@/lib/email'
+import { ageOf, neededAgesFrom } from '@/lib/generate'
+import { AGE_CATEGORIES } from '@/lib/data'
 import type { NextRequest } from 'next/server'
-import type { AgeId } from '@/lib/types'
+import type { AgeId, Story } from '@/lib/types'
 
-// Vercel Cron calls this at 15:00 UTC (17:00 SK čas)
+export const maxDuration = 300
+
+type Sub = { email: string; unsubscribe_token: string; age_preference: AgeId | 'all' | null }
+
+// Evening cron (15:00 UTC = 17:00 SK). Sends APPROVED (status='published') stories
+// that haven't gone out yet, each to its matching age group. Idempotent per story.
 export async function GET(req: NextRequest) {
   const secret = req.headers.get('authorization')?.replace('Bearer ', '')
   if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
-    console.warn('[CRON] Unauthorized request')
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  console.log('[CRON] Daily job started:', new Date().toISOString())
+  console.log('[CRON daily] started:', new Date().toISOString())
   const db = supabaseAdmin()
 
-  // 1. Pick a random unused topic
-  const { data: topics } = await db
-    .from('topics')
-    .select('*')
-    .eq('used', false)
-    .order('priority', { ascending: false })
-    .limit(10)
-
-  if (!topics || topics.length === 0) {
-    console.warn('[CRON] No unused topics — skipping')
-    return Response.json({ skipped: true, reason: 'no_topics' })
-  }
-
-  const topic = topics[Math.floor(Math.random() * Math.min(topics.length, 5))]
-  const input = {
-    ageId: topic.age_id as AgeId,
-    theme: topic.theme,
-    keywords: topic.keywords,
-    moralLesson: topic.moral_lesson,
-  }
-
-  // 2. Generate — use admin-configured provider, cascade on failure
-  const preferredProvider = (await getSetting('ai_provider')) ?? 'openai'
-  let story
-  let usedProvider = preferredProvider
-
-  try {
-    if (preferredProvider === 'grok') {
-      story = await generateStoryGrok(input, await getApiKey('grok_api_key', 'GROK_API_KEY'))
-    } else if (preferredProvider === 'claude') {
-      story = await generateStoryClaude(input, await getApiKey('claude_api_key', 'CLAUDE_API_KEY'))
-    } else {
-      story = await generateStoryOpenAI(input, await getApiKey('openai_api_key', 'OPENAI_API_KEY'))
-    }
-    console.log(`[CRON] Generated via ${usedProvider}: "${story.title}"`)
-  } catch (primaryErr) {
-    console.warn(`[CRON] ${usedProvider} failed, falling back to openai:`, primaryErr)
-    try {
-      story = await generateStoryOpenAI(input, await getApiKey('openai_api_key', 'OPENAI_API_KEY'))
-      usedProvider = 'openai'
-      console.log(`[CRON] Fallback openai success: "${story.title}"`)
-    } catch (fallbackErr) {
-      console.error('[CRON] All providers failed:', fallbackErr)
-      return Response.json({ error: 'Generovanie zlyhalo.' }, { status: 500 })
-    }
-  }
-
-  // 3. Save story
-  const { data: savedStory, error: storyErr } = await db
-    .from('stories')
-    .insert({
-      title: story.title,
-      age_id: topic.age_id,
-      theme: topic.theme,
-      emoji: story.emoji,
-      cover_a: story.cover_a,
-      cover_b: story.cover_b,
-      minutes: story.minutes,
-      pages: story.pages,
-      author: story.author,
-      generated_by: usedProvider,
-      status: 'published',
-    })
-    .select()
-    .single()
-
-  if (storyErr || !savedStory) {
-    console.error('[CRON] Save failed:', storyErr?.message)
-    return Response.json({ error: 'Uloženie zlyhalo.' }, { status: 500 })
-  }
-
-  // 4. Mark topic used
-  await db.from('topics').update({ used: true }).eq('id', topic.id)
-
-  // 5. Get active subscribers (with unsubscribe tokens for SMTP)
   const { data: subscribers } = await db
     .from('subscribers')
-    .select('email, unsubscribe_token')
+    .select('email, unsubscribe_token, age_preference')
     .eq('active', true)
-
-  const subs = (subscribers ?? []) as Array<{ email: string; unsubscribe_token: string }>
-  console.log(`[CRON] Sending to ${subs.length} subscribers`)
-
-  // 6. Send emails
-  let sent = 0
-  if (subs.length > 0) {
-    const result = await sendDailyStory(savedStory, subs)
-    sent = result.sent
+  const subs = (subscribers ?? []) as Sub[]
+  if (subs.length === 0) {
+    console.log('[CRON daily] no active subscribers')
+    return Response.json({ ok: true, sent: 0, reason: 'no_subscribers' })
   }
 
-  // 7. Log
-  await db.from('daily_sends').insert({ story_id: savedStory.id, recipient_count: sent })
+  const since = new Date(Date.now() - 48 * 3600 * 1000).toISOString()
+  const report: Array<{ ageLabel: string; title: string; sent: number }> = []
+  let totalSent = 0
 
-  console.log(`[CRON] Done. "${savedStory.title}" sent to ${sent} subscribers.`)
-  return Response.json({ ok: true, story: { id: savedStory.id, title: savedStory.title }, sent })
+  for (const ageId of neededAgesFrom(subs)) {
+    // newest approved, recent story for this age
+    const { data: stories } = await db
+      .from('stories')
+      .select('*')
+      .eq('age_id', ageId)
+      .eq('status', 'published')
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(5)
+
+    // pick the newest one that hasn't been sent yet (idempotency guard)
+    let story: Story | null = null
+    for (const s of (stories ?? []) as Story[]) {
+      const { count } = await db.from('daily_sends').select('id', { count: 'exact', head: true }).eq('story_id', s.id)
+      if ((count ?? 0) === 0) { story = s; break }
+    }
+    if (!story) { console.log(`[CRON daily] ${ageId}: nothing new approved`); continue }
+
+    const recipients = subs.filter(s => ageOf(s) === ageId)
+    if (recipients.length === 0) continue
+
+    const { sent } = await sendDailyStory(story, recipients)
+    await db.from('daily_sends').insert({ story_id: story.id, recipient_count: sent })
+    totalSent += sent
+    report.push({ ageLabel: AGE_CATEGORIES.find(a => a.id === ageId)?.range ?? '', title: story.title, sent })
+    console.log(`[CRON daily] ${ageId}: "${story.title}" → ${sent}`)
+  }
+
+  if (report.length > 0) {
+    try { await sendDailyReport(report, totalSent) } catch (err) { console.error('[CRON daily] report failed:', err) }
+  }
+
+  console.log(`[CRON daily] done. ${report.length} stories, ${totalSent} emails`)
+  return Response.json({ ok: true, sent: totalSent, stories: report })
 }

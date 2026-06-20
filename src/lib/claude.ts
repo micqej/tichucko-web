@@ -1,8 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { AgeId } from './types'
 import type { GenerateInput, GeneratedStory } from './openai'
-import { LENGTH_SPECS } from './openai'
+import { LENGTH_SPECS, directiveBlock } from './openai'
 import { AGE_CATEGORIES } from './data'
+import { getSetting } from './settings'
 
 const COVER_PALETTES: Record<AgeId, { a: string; b: string }> = {
   a02:   { a: '#ff9bbf', b: '#c89bff' },
@@ -15,7 +16,7 @@ const COVER_PALETTES: Record<AgeId, { a: string; b: string }> = {
 function buildPrompt(input: GenerateInput): string {
   const age = AGE_CATEGORIES.find(a => a.id === input.ageId)!
   const spec = LENGTH_SPECS[input.length ?? 'medium']
-  return `Napíš originálnu slovenskú rozprávku na dobrú noc pre deti vo veku ${age.range}.
+  return `${directiveBlock(input)}Napíš originálnu slovenskú rozprávku na dobrú noc pre deti vo veku ${age.range}.
 
 Téma: ${input.theme}
 ${input.keywords ? `Kľúčové slová: ${input.keywords}` : ''}
@@ -47,7 +48,9 @@ export async function generateStoryClaude(input: GenerateInput, apiKey: string):
   const client = new Anthropic({ apiKey })
 
   const msg = await client.messages.create({
-    model: 'claude-opus-4-5',
+    // Model sa dá meniť v admin nastaveniach (claude_model). Sonnet je na denné
+    // rozprávky dosť dobrý a lacnejší než Opus; pre prémiové prepni na claude-opus-4-8.
+    model: (await getSetting('claude_model')) || process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
     max_tokens: 4096,
     messages: [{ role: 'user', content: buildPrompt(input) }],
   })

@@ -1,6 +1,7 @@
 import OpenAI from 'openai'
 import type { AgeId, StoryPage } from './types'
 import { AGE_CATEGORIES } from './data'
+import { getSetting } from './settings'
 
 function getClient(apiKey?: string) {
   return new OpenAI({ apiKey: apiKey || process.env.OPENAI_API_KEY })
@@ -20,6 +21,15 @@ export interface GenerateInput {
   keywords?: string
   moralLesson?: string
   length?: StoryLength
+  /** Pokyny redaktora (admin) — majú prednosť pred všetkým. */
+  adminDirective?: string
+}
+
+/** Blok s pokynmi redaktora, ktorý sa vkladá na začiatok promptu (najvyššia priorita). */
+export function directiveBlock(input: GenerateInput): string {
+  return input.adminDirective?.trim()
+    ? `\nNAJDÔLEŽITEJŠIE — pokyny redaktora, ktoré musíš dodržať nad všetkým ostatným:\n${input.adminDirective.trim()}\n`
+    : ''
 }
 
 export interface GeneratedStory {
@@ -43,7 +53,7 @@ const COVER_PALETTES: Record<AgeId, { a: string; b: string }> = {
 function buildPrompt(input: GenerateInput): string {
   const age = AGE_CATEGORIES.find(a => a.id === input.ageId)!
   const spec = LENGTH_SPECS[input.length ?? 'medium']
-  return `Napíš originálnu slovenskú rozprávku na dobrú noc pre deti vo veku ${age.range}.
+  return `${directiveBlock(input)}Napíš originálnu slovenskú rozprávku na dobrú noc pre deti vo veku ${age.range}.
 
 Téma: ${input.theme}
 ${input.keywords ? `Kľúčové slová: ${input.keywords}` : ''}
@@ -73,7 +83,7 @@ Odpovedz VÝHRADNE vo formáte JSON (bez markdown):
 
 export async function generateStoryOpenAI(input: GenerateInput, apiKey?: string): Promise<GeneratedStory> {
   const res = await getClient(apiKey).chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: (await getSetting('openai_model')) || 'gpt-4o-mini',
     messages: [{ role: 'user', content: buildPrompt(input) }],
     response_format: { type: 'json_object' },
     temperature: 0.9,

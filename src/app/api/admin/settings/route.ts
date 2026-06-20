@@ -1,41 +1,28 @@
-import { supabaseAdmin } from '@/lib/supabase'
+import { getAllSettings, setSetting, SECRET_KEYS } from '@/lib/settings'
 import type { NextRequest } from 'next/server'
 
-const API_KEY_KEYS = ['openai_api_key', 'claude_api_key', 'groq_api_key', 'resend_api_key', 'smtp_password']
-
-function maskSecret(key: string, value: string): string {
-  if (!API_KEY_KEYS.includes(key) || !value) return value
-  if (value.length <= 8) return '••••••••'
-  return value.slice(0, 6) + '••••••••' + value.slice(-4)
+function mask(key: string, value: string): string {
+  if (!SECRET_KEYS.has(key) || !value) return value
+  return '••••••••' // hodnota je šifrovaná v DB, klientovi ju neukazujeme
 }
 
 export async function GET() {
-  const db = supabaseAdmin()
-  const { data, error } = await db.from('settings').select('key, value')
-  if (error) return Response.json({ error: error.message }, { status: 500 })
-
-  const masked = Object.fromEntries(
-    (data ?? []).map((r: { key: string; value: string }) => [r.key, maskSecret(r.key, r.value)])
-  )
+  const all = await getAllSettings()
+  const masked = Object.fromEntries(Object.entries(all).map(([k, v]) => [k, mask(k, v)]))
+  delete masked['admin_password_hash'] // hash hesla klientovi nikdy
   return Response.json({ settings: masked })
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json()
-  const { key, value } = body as { key: string; value: string }
-
+  const { key, value } = (await req.json()) as { key: string; value: string }
   if (!key) return Response.json({ error: 'Missing key' }, { status: 400 })
+  if (key === 'admin_password_hash') return Response.json({ error: 'Forbidden' }, { status: 403 })
 
-  // If value is still the masked form, don't overwrite
-  if (API_KEY_KEYS.includes(key) && value.includes('••••')) {
+  // ak prišla ešte maskovaná hodnota, neprepisuj
+  if (SECRET_KEYS.has(key) && value.includes('••••')) {
     return Response.json({ ok: true, skipped: true })
   }
 
-  const db = supabaseAdmin()
-  const { error } = await db
-    .from('settings')
-    .upsert({ key, value: value ?? '', updated_at: new Date().toISOString() })
-
-  if (error) return Response.json({ error: error.message }, { status: 500 })
+  await setSetting(key, value ?? '')
   return Response.json({ ok: true })
 }
